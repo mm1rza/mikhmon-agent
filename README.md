@@ -33,7 +33,7 @@
 
 ### Public Order Page
 ![Public Order](img/public_order.png)
-*Landing page untuk pembelian langsung oleh customer*
+*Landing page untuk pembelian langsung oleh customer link :https://yourdomain.com/public/index.php?agent=AG001*
 
 ## 📖 Tentang Proyek
 
@@ -204,6 +204,7 @@ Project Link: [https://github.com/alijayanet/mikhmon-agent](https://github.com/a
   Made with ❤️ by Ali Jaya Net
 
 </p>
+
 
 
 
