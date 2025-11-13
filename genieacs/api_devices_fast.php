@@ -272,6 +272,7 @@ function safe_string($value) {
                 <td>
                     <?php 
                     $ssid_safe = safe_string($data['wifi_ssid']);
+                    $pass_safe = safe_string($data['wifi_password'] ?? '');
                     if ($ssid_safe !== 'N/A' && strpos($ssid_safe, ',') !== false) {
                         // Multiple SSIDs - display as list
                         $ssid_array = explode(', ', $ssid_safe);

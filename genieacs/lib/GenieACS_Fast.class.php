@@ -141,14 +141,16 @@ class GenieACS_Fast {
             'N/A';
 
         // WiFi Password - use standard TR-069 path only (more reliable)
-        $data['wifi_password'] =
+        $wifiPassword =
             $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['KeyPassphrase']['_value'] ??
             $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['PreSharedKey']['1']['KeyPassphrase']['_value'] ??
             $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['PreSharedKey']['1']['PreSharedKey']['_value'] ??
             $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['2']['KeyPassphrase']['_value'] ??
             $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['3']['KeyPassphrase']['_value'] ??
             $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['4']['KeyPassphrase']['_value'] ??
-            'N/A';
+            null;
+
+        $data['wifi_password'] = $wifiPassword !== null ? (string)$wifiPassword : 'N/A';
 
         // Optical RX Power
         $rxPower =
