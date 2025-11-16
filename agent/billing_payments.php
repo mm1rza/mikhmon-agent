@@ -674,7 +674,7 @@ include_once('include_nav.php');
             </div>
             <div class="payment-receipt-summary" id="paymentReceiptContent"></div>
             <div class="payment-receipt-actions">
-                <button type="button" id="printNormalBtn"><i class="fa fa-print"></i> Print A4</button>
+                <button type="button" id="printNormalBtn"><i class="fa fa-copy"></i> Copy/Salin</button>
                 <button type="button" id="printThermalBtn"><i class="fa fa-print"></i> Print Thermal</button>
                 <button type="button" id="receiptDoneBtn"><i class="fa fa-check"></i> Selesai</button>
             </div>
@@ -944,7 +944,29 @@ include_once('include_nav.php');
         });
         if (printNormalBtn) {
             printNormalBtn.addEventListener('click', function() {
-                openPrint({ thermal: false });
+                // Instead of printing, copy the receipt content to clipboard
+                if (!currentReceipt) {
+                    return;
+                }
+                const html = buildPrintHtml(currentReceipt, { thermal: false });
+                
+                // Extract text content from HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(textContent).then(() => {
+                    // Show success message
+                    const originalText = printNormalBtn.innerHTML;
+                    printNormalBtn.innerHTML = '<i class="fa fa-check"></i> Disalin!';
+                    setTimeout(() => {
+                        printNormalBtn.innerHTML = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Gagal menyalin ke clipboard. Silakan coba lagi.');
+                });
             });
         }
         if (printThermalBtn) {

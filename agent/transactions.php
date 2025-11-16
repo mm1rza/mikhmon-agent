@@ -468,6 +468,44 @@ include_once('include_nav.php');
     }
 }
 
+/* Add styles for the editable price field */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #475569;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color:rgb(2, 8, 17);
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .form-control {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
 </style>
 
 <div class="row">
@@ -689,10 +727,7 @@ include_once('include_nav.php');
                             <div class="label">Ref ID</div>
                             <div class="value"><?= htmlspecialchars($trx['voucher_username']); ?></div>
                         </div>
-                        <div class="card-row">
-                            <div class="label">Modal</div>
-                            <div class="value value-muted">Rp <?= number_format($basePrice, 0, ',', '.'); ?></div>
-                        </div>
+                        <!-- Hide the buy price (modal) and only show the sell price -->
                         <div class="card-row">
                             <div class="label">Harga Jual</div>
                             <div class="value value-muted">Rp <?= number_format($sellPrice, 0, ',', '.'); ?></div>
@@ -747,6 +782,11 @@ include_once('include_nav.php');
         <h4>Detail Transaksi</h4>
         <p class="subtitle">Cetak struk transaksi untuk pelanggan.</p>
         <div class="payment-receipt-summary" id="transactionReceiptContent"></div>
+        <!-- Add editable price field for sell price -->
+        <div class="form-group" id="editPriceContainer" style="margin: 15px 0; display: none;">
+            <label for="editSellPrice">Harga Jual (editable):</label>
+            <input type="text" class="form-control" id="editSellPrice" placeholder="Masukkan harga jual">
+        </div>
         <div class="payment-receipt-actions">
             <button type="button" id="printNormalBtn"><i class="fa fa-print"></i> Print Normal</button>
             <button type="button" id="printThermalBtn"><i class="fa fa-print"></i> Thermal 58mm</button>
@@ -764,6 +804,8 @@ include_once('include_nav.php');
     const doneBtn = document.getElementById('receiptDoneBtn');
     const printNormalBtn = document.getElementById('printNormalBtn');
     const printThermalBtn = document.getElementById('printThermalBtn');
+    const editPriceContainer = document.getElementById('editPriceContainer');
+    const editSellPriceInput = document.getElementById('editSellPrice');
     let currentPayload = null;
 
     if (!overlay || !contentBox) {
@@ -797,6 +839,13 @@ include_once('include_nav.php');
         return value;
     }
 
+    function parseCurrencyString(value) {
+        if (!value) return 0;
+        // Remove all non-digit characters except comma and period
+        const sanitized = String(value).replace(/[^0-9,.]/g, '').replace(/,/g, '');
+        return sanitized ? parseFloat(sanitized) : 0;
+    }
+
     function buildReceiptHtml(data) {
         const isDebit = data.direction === 'debit';
         const amountDisplay = `${isDebit ? '-' : '+'}Rp ${formatCurrency(data.amount)}`;
@@ -810,8 +859,12 @@ include_once('include_nav.php');
         const billingAmountRow = data.billing_invoice_amount ? `<dt>Total Tagihan</dt><dd>Rp ${formatCurrency(data.billing_invoice_amount)}</dd>` : '';
         const billingStatusRow = data.billing_invoice_status ? `<dt>Status Tagihan</dt><dd>${safeValue(data.billing_invoice_status)}</dd>` : '';
         const billingPeriodRow = data.billing_invoice_period ? `<dt>Periode</dt><dd>${safeValue(data.billing_invoice_period)}</dd>` : '';
+        
+        // Use edited sell price if available, otherwise use original
         const showVoucherPricing = data.type === 'digiflazz' || data.type === 'voucher';
-        const sellPriceRow = showVoucherPricing && data.sell_price ? `<dt>Harga Jual</dt><dd>Rp ${formatCurrency(data.sell_price)}</dd>` : '';
+        const editedSellPrice = editSellPriceInput ? parseCurrencyString(editSellPriceInput.value) : 0;
+        const sellPriceToUse = editedSellPrice > 0 ? editedSellPrice : data.sell_price;
+        const sellPriceRow = showVoucherPricing && sellPriceToUse ? `<dt>Harga Jual</dt><dd>Rp ${formatCurrency(sellPriceToUse)}</dd>` : '';
 
         return `
             <dl>
@@ -838,6 +891,18 @@ include_once('include_nav.php');
     function openReceipt(payload) {
         currentPayload = payload;
         contentBox.innerHTML = buildReceiptHtml(payload);
+        
+        // Show editable price field only for voucher/digiflazz transactions
+        if (payload.type === 'digiflazz' || payload.type === 'voucher') {
+            editPriceContainer.style.display = 'block';
+            // Set the input value to the current sell price
+            if (editSellPriceInput) {
+                editSellPriceInput.value = formatCurrency(payload.sell_price || 0);
+            }
+        } else {
+            editPriceContainer.style.display = 'none';
+        }
+        
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
@@ -846,16 +911,30 @@ include_once('include_nav.php');
         overlay.style.display = 'none';
         document.body.style.removeProperty('overflow');
         currentPayload = null;
+        // Hide the editable price field and clear the input
+        if (editPriceContainer) {
+            editPriceContainer.style.display = 'none';
+        }
+        if (editSellPriceInput) {
+            editSellPriceInput.value = '';
+        }
     }
 
     function buildPrintDocument(payload, options = {}) {
         const thermal = Boolean(options.thermal);
         const isDebit = payload.direction === 'debit';
         const signedAmount = `${isDebit ? '-' : '+'}Rp ${formatCurrency(payload.amount)}`;
-        const base = formatCurrency(payload.base_price || 0);
-        const sell = formatCurrency(payload.sell_price || 0);
+        
+        // Use edited sell price if available, otherwise use original
+        const editedSellPrice = editSellPriceInput ? parseCurrencyString(editSellPriceInput.value) : 0;
+        const sellPriceToUse = editedSellPrice > 0 ? editedSellPrice : payload.sell_price;
+        const sell = formatCurrency(sellPriceToUse || 0);
 
-        const detailRows = [
+        // For thermal print, don't include the amount line as requested
+        const detailRows = thermal ? [
+            `<div class="row"><span class="label">Tanggal</span><span class="value">${formatDateTime(payload.created_at)}</span></div>`,
+            `<div class="row"><span class="label">Jenis</span><span class="value">${safeValue(payload.type_label)}</span></div>`
+        ] : [
             `<div class="row"><span class="label">Tanggal</span><span class="value">${formatDateTime(payload.created_at)}</span></div>`,
             `<div class="row"><span class="label">Jenis</span><span class="value">${safeValue(payload.type_label)}</span></div>`,
             `<div class="row"><span class="label">Jumlah</span><span class="value">${signedAmount}</span></div>`
@@ -873,7 +952,7 @@ include_once('include_nav.php');
         if (payload.customer_no) {
             detailRows.push(`<div class="row"><span class="label">Nomor Tujuan</span><span class="value">${safeValue(payload.customer_no)}</span></div>`);
         }
-        if ((payload.type === 'digiflazz' || payload.type === 'voucher') && payload.sell_price) {
+        if ((payload.type === 'digiflazz' || payload.type === 'voucher') && sellPriceToUse) {
             detailRows.push(`<div class="row"><span class="label">Harga Jual</span><span class="value">Rp ${sell}</span></div>`);
         }
         if (payload.billing_customer_name) {
@@ -894,9 +973,6 @@ include_once('include_nav.php');
 
         if (payload.status_label) {
             detailRows.push(`<div class="row"><span class="label">Status</span><span class="value">${safeValue(payload.status_label)}</span></div>`);
-        }
-        if ((payload.type === 'digiflazz' || payload.type === 'voucher') && payload.sell_price) {
-            detailRows.push(`<div class="row"><span class="label">Harga Jual</span><span class="value">Rp ${sell}</span></div>`);
         }
 
         if (thermal) {

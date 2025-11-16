@@ -465,7 +465,7 @@ include_once('include_nav.php');
         
         <div class="modal-footer">
             <button onclick="printVouchers()" class="btn btn-primary">
-                <i class="fa fa-print"></i> Print Normal
+                <i class="fa fa-copy"></i> Copy/Salin
             </button>
             <button onclick="printVouchersThermal()" class="btn btn-info">
                 <i class="fa fa-print"></i> Print Thermal 58mm
@@ -643,91 +643,30 @@ include_once('include_nav.php');
     }
     
     function printVouchers() {
-        const printWindow = window.open('', '_blank');
         const vouchers = generatedVouchers;
         
-        let printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Print Voucher</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                .voucher-print { 
-                    border: 2px dashed #333; 
-                    padding: 20px; 
-                    margin: 20px 0; 
-                    page-break-inside: avoid;
-                    width: 300px;
-                }
-                .voucher-print h3 { margin: 0 0 15px 0; text-align: center; }
-                .voucher-print .field { margin: 10px 0; }
-                .voucher-print .label { font-weight: bold; font-size: 12px; color: #666; }
-                .voucher-print .value { 
-                    font-size: 18px; 
-                    font-family: monospace; 
-                    background: #f0f0f0; 
-                    padding: 8px; 
-                    margin-top: 5px;
-                    border-radius: 4px;
-                }
-                .voucher-print .profile { 
-                    text-align: center; 
-                    background: #667eea; 
-                    color: white; 
-                    padding: 5px; 
-                    border-radius: 4px;
-                    margin-bottom: 15px;
-                }
-                @media print {
-                    .voucher-print { page-break-after: always; }
-                }
-            </style>
-        </head>
-        <body>
-        `;
+        // Create text content for all vouchers
+        let textContent = '';
         
         vouchers.forEach((voucher, index) => {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('http://10.5.50.1/login?username=' + voucher.username + '&password=' + voucher.password)}`;
+            if (index > 0) textContent += '\n' + '='.repeat(40) + '\n';
             
-            printContent += `
-            <div class="voucher-print">
-                <h3>Voucher WiFi #${index + 1}</h3>
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <div style="font-weight: bold; font-size: 14px; color: #667eea;">${ispName}</div>
-                    ${ispDns ? '<div style="font-size: 11px; color: #999;">' + ispDns + '</div>' : ''}
-                </div>
-                <div class="profile">${voucher.profile}</div>
-                <div style="text-align: center; margin: 15px 0;">
-                    <img src="${qrUrl}" width="150" height="150" style="border: 2px solid #667eea; padding: 5px; border-radius: 8px;">
-                    <div style="font-size: 11px; color: #666; margin-top: 5px;">Scan untuk login otomatis</div>
-                </div>
-                <div class="field">
-                    <div class="label">Username:</div>
-                    <div class="value">${voucher.username}</div>
-                </div>
-                <div class="field">
-                    <div class="label">Password:</div>
-                    <div class="value">${voucher.password}</div>
-                </div>
-                <div style="text-align: center; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc;">
-                    <div style="font-size: 10px; color: #999;">Agent: ${agentName} (${agentCode})</div>
-                </div>
-            </div>
-            `;
+            textContent += `Voucher WiFi #${index + 1}\n`;
+            textContent += `${ispName}${ispDns ? ' (' + ispDns + ')' : ''}\n\n`;
+            textContent += `Profil: ${voucher.profile}\n`;
+            textContent += `Username: ${voucher.username}\n`;
+            textContent += `Password: ${voucher.password}\n\n`;
+            textContent += `Agent: ${agentName} (${agentCode})\n`;
         });
         
-        printContent += `
-        </body>
-        </html>
-        `;
-        
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        
-        setTimeout(() => {
-            printWindow.print();
-        }, 500);
+        // Copy to clipboard
+        navigator.clipboard.writeText(textContent).then(() => {
+            // Show success message
+            alert('Semua voucher berhasil disalin ke clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Gagal menyalin ke clipboard. Silakan coba lagi.');
+        });
     }
     
     function printVouchersThermal() {

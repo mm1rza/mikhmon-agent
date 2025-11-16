@@ -217,7 +217,7 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
                     <dt>Produk</dt><dd id="printSummaryProduct">-</dd>
                     <dt>Nomor Tujuan</dt><dd id="printSummaryCustomer">-</dd>
                     <dt>Status</dt><dd><span id="printSummaryStatus" class="badge-status status-pending">PENDING</span></dd>
-                    <dt>Harga Jual</dt><dd id="printSummaryPrice">Rp 0</dd>
+                    <dt>Harga</dt><dd id="printSummaryPrice">Rp 0</dd>
                     <dt>Serial Number</dt><dd id="printSummarySerial">-</dd>
                 </dl>
                 <div id="printSummaryMessage" style="margin-top:10px; font-size:12px; color:#475569; display:none;"></div>
@@ -225,14 +225,14 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
             <form>
                 <div class="form-group">
                     <label>Harga Jual (editable)</label>
-                    <input type="text" class="form-control" id="printSellPriceInput" autocomplete="off" inputmode="numeric" placeholder="Contoh: 55000">
+                    <input type="text" class="form-control" id="printSellPriceInput" placeholder="Masukkan harga jual">
                 </div>
                 <div class="form-group">
                     <label>Catatan Tambahan (opsional)</label>
                     <textarea class="form-control" id="printNotesInput" placeholder="Contoh: Terima kasih sudah berbelanja"></textarea>
                 </div>
                 <div class="print-actions">
-                    <button type="button" class="btn-secondary" id="printNormalBtn"><i class="fa fa-print"></i> Print Normal</button>
+                    <button type="button" class="btn-secondary" id="printNormalBtn"><i class="fa fa-copy"></i> Copy/Salin</button>
                     <button type="button" class="btn-success" id="printThermalBtn"><i class="fa fa-print"></i> Thermal 58mm</button>
                     <button type="button" class="btn-default" id="printCancelBtn">Tutup</button>
                 </div>
@@ -298,16 +298,16 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
         }
 
         function updatePriceSummary(payload, sell) {
-            summaryPrice.textContent = 'Rp ' + formatCurrency(sell);
+            summaryPrice.textContent = formatCurrency(sell ? payload.sellPrice : payload.basePrice);
         }
 
         function openModal(payload) {
-            const sellValue = parseCurrencyString(sellPriceInput.value) || payload.sellPrice;
-
             summaryRef.textContent = payload.ref;
             summaryProduct.textContent = payload.product || '-';
             summaryCustomer.textContent = payload.customerNo || '-';
             summarySerial.textContent = payload.serial || '-';
+            // Show the sell price in the summary
+            summaryPrice.textContent = 'Rp ' + formatCurrency(payload.sellPrice);
 
             summaryStatus.textContent = payload.statusLabel || 'PENDING';
             summaryStatus.className = 'badge-status ' + (payload.statusClass || 'status-pending');
@@ -320,10 +320,9 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
                 summaryMessage.textContent = '';
             }
 
+            // Set the sell price input to the payload sell price
             sellPriceInput.value = formatCurrency(payload.sellPrice);
             notesInput.value = '';
-            updatePriceSummary(payload, payload.sellPrice);
-
             overlay.style.display = 'flex';
             document.body.style.overflow = 'hidden';
 
@@ -336,12 +335,14 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
             payloadStore.current = null;
         }
 
-        function buildReceiptHTML(payload, sellPrice, notes, options) {
+        function buildReceiptHTML(payload, notes, options) {
             const createdAt = new Date(payload.createdAt);
             const formattedDate = createdAt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
             const formattedTime = createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
             const noteBlock = notes ? `<div class="note">${notes}</div>` : '';
             const messageBlock = payload.message ? `<div class="note">${payload.message}</div>` : '';
+            // Show only the sell price (manually entered price)
+            const sellPriceDisplay = payload.sellPrice > 0 ? `Rp ${formatCurrency(payload.sellPrice)}` : 'Rp 0';
 
             if (options.thermal) {
                 return `<!DOCTYPE html>
@@ -374,7 +375,7 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
             <div class="row"><span class="label">Ref ID</span><span class="value">${payload.ref}</span></div>
             <div class="row"><span class="label">Produk</span><span class="value">${payload.product || '-'}</span></div>
             <div class="row"><span class="label">Nomor</span><span class="value">${payload.customerNo || '-'}</span></div>
-            <div class="row"><span class="label">Harga</span><span class="value">Rp ${formatCurrency(sellPrice)}</span></div>
+            <div class="row"><span class="label">Harga</span><span class="value">${sellPriceDisplay}</span></div>
             ${payload.serial ? `<div class="row"><span class="label">Serial</span><span class="value">${payload.serial}</span></div>` : ''}
         </div>
         <div class="separator"></div>
@@ -415,7 +416,7 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
         <tr><td>Produk</td><td>${payload.product || '-'}</td></tr>
         <tr><td>Nomor Tujuan</td><td>${payload.customerNo || '-'}</td></tr>
         <tr><td>Status</td><td>${payload.statusLabel}</td></tr>
-        <tr><td>Harga</td><td>Rp ${formatCurrency(sellPrice)}</td></tr>
+        <tr><td>Harga</td><td>${sellPriceDisplay}</td></tr>
         ${payload.serial ? `<tr><td>Serial Number</td><td class="sn-value">${payload.serial}</td></tr>` : ''}
     </table>
     ${messageBlock}
@@ -425,23 +426,6 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
 </html>`;
         }
 
-        function handlePrint(options) {
-            if (!payloadStore.current) {
-                return;
-            }
-            const sellValue = parseCurrencyString(sellPriceInput.value) || payloadStore.current.sellPrice;
-            const notes = notesInput.value.trim();
-            const html = buildReceiptHTML(payloadStore.current, sellValue, notes, options);
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                alert('Popup diblokir oleh browser. Harap izinkan popup untuk mencetak.');
-                return;
-            }
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-        }
 
         function init() {
             overlay = document.getElementById('digiflazzPrintOverlay');
@@ -476,34 +460,45 @@ if (!defined('DIGIFLAZZ_PRINT_COMPONENT')) {
             });
 
             if (sellPriceInput) {
-                sellPriceInput.addEventListener('blur', function() {
-                    const value = parseCurrencyString(sellPriceInput.value);
-                    const payload = payloadStore.current;
-                    if (!payload) {
-                        return;
-                    }
-                    if (value > 0) {
-                        sellPriceInput.value = formatCurrency(value);
-                        updatePriceSummary(payload, value);
-                    } else {
-                        sellPriceInput.value = formatCurrency(payload.sellPrice);
-                        updatePriceSummary(payload, payload.sellPrice);
-                    }
-                });
-
                 sellPriceInput.addEventListener('input', function() {
-                    const payload = payloadStore.current;
-                    if (!payload) {
-                        return;
+                    const sellPrice = parseCurrencyString(sellPriceInput.value);
+                    if (sellPrice > 0) {
+                        updatePriceSummary(payloadStore.current, true);
                     }
-                    const value = parseCurrencyString(sellPriceInput.value);
-                    updatePriceSummary(payload, value || payload.sellPrice);
                 });
             }
 
             if (normalBtn) {
                 normalBtn.addEventListener('click', function() {
-                    handlePrint({ thermal: false });
+                    // Instead of printing, copy the receipt content to clipboard
+                    if (!payloadStore.current) {
+                        return;
+                    }
+                    // Use the sell price from the input field if it has been modified
+                    const sellValue = parseCurrencyString(sellPriceInput.value);
+                    if (sellValue > 0) {
+                        payloadStore.current.sellPrice = sellValue;
+                    }
+                    const notes = notesInput.value.trim();
+                    const html = buildReceiptHTML(payloadStore.current, notes, { thermal: false });
+                    
+                    // Extract text content from HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                    
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(textContent).then(() => {
+                        // Show success message
+                        const originalText = normalBtn.innerHTML;
+                        normalBtn.innerHTML = '<i class="fa fa-check"></i> Disalin!';
+                        setTimeout(() => {
+                            normalBtn.innerHTML = originalText;
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
+                        alert('Gagal menyalin ke clipboard. Silakan coba lagi.');
+                    });
                 });
             }
 

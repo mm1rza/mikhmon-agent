@@ -201,8 +201,8 @@ include_once('include_nav.php');
                     <?= date('d M Y H:i', strtotime($voucher['created_at'])); ?>
                 </div>
                 <div class="voucher-actions">
-                    <button class="btn-print-voucher" onclick="printSingleVoucher('<?= htmlspecialchars($voucher['username']); ?>', '<?= htmlspecialchars($voucher['password']); ?>', '<?= htmlspecialchars($voucher['profile_name']); ?>')">
-                        <i class="fa fa-print"></i> Print Normal
+                    <button class="btn-print-voucher" onclick="copyVoucherToClipboard('<?= htmlspecialchars($voucher['username']); ?>', '<?= htmlspecialchars($voucher['password']); ?>', '<?= htmlspecialchars($voucher['profile_name']); ?>')">
+                        <i class="fa fa-copy"></i> Copy/Salin
                     </button>
                     <button class="btn-print-voucher" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" onclick="printSingleVoucherThermal('<?= htmlspecialchars($voucher['username']); ?>', '<?= htmlspecialchars($voucher['password']); ?>', '<?= htmlspecialchars($voucher['profile_name']); ?>')">
                         <i class="fa fa-print"></i> Thermal 58mm
@@ -381,6 +381,35 @@ function printSingleVoucher(username, password, profile) {
     
     printWindow.document.write(printContent);
     printWindow.document.close();
+}
+
+function copyVoucherToClipboard(username, password, profile) {
+    // Create a formatted text version of the voucher
+    const ispInfo = `${ispName}${ispDns ? ' (' + ispDns + ')' : ''}`;
+    const agentInfo = `${agentName} (${agentCode})`;
+    
+    const voucherText = `
+Voucher WiFi
+${ispInfo}
+
+Profil: ${profile}
+
+Username: ${username}
+Password: ${password}
+
+Agent: ${agentInfo}
+
+Terima kasih telah menggunakan layanan kami
+`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(voucherText).then(() => {
+        // Show success message
+        alert('Voucher berhasil disalin ke clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert('Gagal menyalin ke clipboard. Silakan coba lagi.');
+    });
 }
 
 function printSingleVoucherThermal(username, password, profile) {
