@@ -72,10 +72,10 @@ if (!isset($_SESSION["mikhmon"])) {
 
   if ($livereport == "disable") {
     $logh = "457px";
-    $lreport = "style='display:none;'";
+    $lreport_style = "display:none;";
   } else {
     $logh = "350px";
-    $lreport = "style='display:block;'";
+    $lreport_style = "display:block;";
   }
   
    // get & counting hotspot users
@@ -94,12 +94,20 @@ if (!isset($_SESSION["mikhmon"])) {
         $hunit = "items";
     }
 
-    // get & counting ppp secrets
+    // get & counting ppp active
     $countpppactive = count($API->comm("/ppp/active/print"));
     if ($countpppactive < 2) {
         $hunit = "item";
     } elseif ($countpppactive > 1) {
         $hunit = "items";
+    }
+
+    // calculate ppp offline (secrets - active)
+    $countpppoffline = $countsecrets - $countpppactive;
+    if ($countpppoffline < 2) {
+        $offlineunit = "item";
+    } elseif ($countpppoffline > 1) {
+        $offlineunit = "items";
     }
 /*
 // get selling report
@@ -275,12 +283,12 @@ if (!isset($_SESSION["mikhmon"])) {
 						</div>
 						<div class="col-3 col-box-6">
 							<div class="box bg-green bmh-75">
-								<a onclick="cancelPage()" href="./?ppp=profiles&session=<?= $session; ?>">
-									<h1><?= $countprofiles; ?>
-										<span style="font-size: 15px;"><?= $uunit; ?></span>
+								<a onclick="cancelPage()" href="./?ppp=secrets&filter=offline&session=<?= $session; ?>">
+									<h1><?= $countpppoffline; ?>
+										<span style="font-size: 15px;"><?= $offlineunit; ?></span>
 									</h1>
 									<div>
-										<i class="fa fa-users"></i> <?= $_ppp_profiles ?>
+										<i class="fa fa-user-times"></i> PPP Offline
 									</div>
 								</a>
 							</div>
@@ -443,7 +451,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>  
             <div class="col-4">
             <div id="r_4" class="row">
-              <div <?= $lreport; ?> class="box bmh-75 box-bordered">
+              <div style="<?= $lreport_style; ?>" class="box bmh-75 box-bordered">
                 <div class="box-group">
                   <div class="box-group-icon"><i class="fa fa-money"></i></div>
                     <div class="box-group-area">
@@ -470,7 +478,7 @@ if (!isset($_SESSION["mikhmon"])) {
                 <h3><a onclick="cancelPage()" href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a></h3></div>
                   <div class="card-body">
                     <div style="padding: 5px; height: <?= $logh; ?> ;" class="mr-t-10 overflow">
-                      <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">
+                      <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
                         <thead>
                           <tr>
                             <th><?= $_time ?></th>
