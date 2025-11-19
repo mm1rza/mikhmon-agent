@@ -283,7 +283,7 @@ class VoucherGenerator {
                 "name" => $username,
                 "password" => $password,
                 "profile" => $transaction['profile_name'],
-                "comment" => "Public Sale - " . $transaction['transaction_id']
+                "comment" => "up-Public Sale - " . $transaction['transaction_id']
             ]);
             
             $API->disconnect();
@@ -379,3 +379,4 @@ class VoucherGenerator {
         return true;
     }
 }
+
