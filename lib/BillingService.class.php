@@ -313,9 +313,9 @@ class BillingService
     public function createCustomer(array $data): int
     {
         $sql = "INSERT INTO billing_customers
-                    (profile_id, name, phone, email, address, service_number, genieacs_match_mode, genieacs_pppoe_username, billing_day, status, is_isolated, notes)
+                    (profile_id, name, phone, email, address, service_number, genieacs_match_mode, genieacs_pppoe_username, billing_day, auto_isolation, status, is_isolated, notes)
                 VALUES
-                    (:profile_id, :name, :phone, :email, :address, :service_number, :genieacs_match_mode, :genieacs_pppoe_username, :billing_day, :status, :is_isolated, :notes)";
+                    (:profile_id, :name, :phone, :email, :address, :service_number, :genieacs_match_mode, :genieacs_pppoe_username, :billing_day, :auto_isolation, :status, :is_isolated, :notes)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':profile_id' => $data['profile_id'],
@@ -327,6 +327,7 @@ class BillingService
             ':genieacs_match_mode' => 'pppoe_username',
             ':genieacs_pppoe_username' => $data['genieacs_pppoe_username'] ?? null,
             ':billing_day' => $data['billing_day'],
+            ':auto_isolation' => $data['auto_isolation'] ?? 1,
             ':status' => $data['status'] ?? 'active',
             ':is_isolated' => $data['is_isolated'] ?? 0,
             ':notes' => $data['notes'] ?? null,
@@ -346,6 +347,7 @@ class BillingService
                     genieacs_match_mode = :genieacs_match_mode,
                     genieacs_pppoe_username = :genieacs_pppoe_username,
                     billing_day = :billing_day,
+                    auto_isolation = :auto_isolation,
                     status = :status,
                     is_isolated = :is_isolated,
                     notes = :notes
@@ -362,6 +364,7 @@ class BillingService
             ':genieacs_match_mode' => 'pppoe_username',
             ':genieacs_pppoe_username' => $data['genieacs_pppoe_username'] ?? null,
             ':billing_day' => $data['billing_day'],
+            ':auto_isolation' => $data['auto_isolation'] ?? 1,
             ':status' => $data['status'] ?? 'active',
             ':is_isolated' => $data['is_isolated'] ?? 0,
             ':notes' => $data['notes'] ?? null,
