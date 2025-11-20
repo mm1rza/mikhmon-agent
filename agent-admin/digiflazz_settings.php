@@ -260,6 +260,25 @@ $statusLabel = $enabled ? 'AKTIF' : 'NON-AKTIF';
                                 <input type="number" min="0" step="50" name="digiflazz_default_markup_nominal" class="form-control" value="<?= (int)$settings['digiflazz_default_markup_nominal']; ?>">
                                 <div class="help-text">Nilai nominal yang ditambahkan ke harga dasar saat ditampilkan ke agent/public.</div>
                             </div>
+                            
+                            <?php
+                            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $webhookUrl = $protocol . "://" . $host . "/api/digiflazz_webhook.php";
+                            ?>
+                            <div class="form-group">
+                                <label>Webhook URL</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" value="<?= $webhookUrl; ?>" id="webhookUrl" readonly>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-default" onclick="copyWebhookUrl()" title="Salin URL">
+                                            <i class="fa fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="help-text">Salin URL ini dan masukkan ke pengaturan webhook di dashboard Digiflazz.</div>
+                            </div>
+
                             <div class="form-group">
                                 <label>Webhook Secret</label>
                                 <input type="text" name="digiflazz_webhook_secret" class="form-control" value="<?= htmlspecialchars($settings['digiflazz_webhook_secret']); ?>" autocomplete="off">
@@ -349,5 +368,14 @@ $statusLabel = $enabled ? 'AKTIF' : 'NON-AKTIF';
         <?php endif; ?>
     </div>
 </div>
-</div>
+
+<script>
+function copyWebhookUrl() {
+    var copyText = document.getElementById("webhookUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); /* For mobile devices */
+    document.execCommand("copy");
+    alert("Webhook URL berhasil disalin: " + copyText.value);
+}
+</script>
 </div>
