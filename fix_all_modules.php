@@ -173,7 +173,7 @@ CREATE TABLE `agents` (
   UNIQUE KEY `unique_agent_code` (`agent_code`),
   KEY `idx_agent_code` (`agent_code`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_settings' => <<<SQL
 CREATE TABLE `agent_settings` (
@@ -188,7 +188,7 @@ CREATE TABLE `agent_settings` (
   `updated_by` VARCHAR(50),
   CONSTRAINT `fk_agent_settings_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON DELETE CASCADE,
   UNIQUE KEY `unique_agent_setting` (`agent_id`, `setting_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_prices' => <<<SQL
 CREATE TABLE `agent_prices` (
@@ -202,7 +202,7 @@ CREATE TABLE `agent_prices` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_agent_prices_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON DELETE CASCADE,
   UNIQUE KEY `unique_agent_profile` (`agent_id`, `profile_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_transactions' => <<<SQL
 CREATE TABLE `agent_transactions` (
@@ -225,7 +225,7 @@ CREATE TABLE `agent_transactions` (
   CONSTRAINT `fk_agent_transactions_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON DELETE CASCADE,
   INDEX `idx_agent_date` (`agent_id`, `created_at`),
   INDEX `idx_reference` (`reference_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_vouchers' => <<<SQL
 CREATE TABLE `agent_vouchers` (
@@ -252,7 +252,7 @@ CREATE TABLE `agent_vouchers` (
   INDEX `idx_username` (`username`),
   INDEX `idx_status` (`status`),
   INDEX `idx_customer_phone` (`customer_phone`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_commissions' => <<<SQL
 CREATE TABLE `agent_commissions` (
@@ -270,7 +270,7 @@ CREATE TABLE `agent_commissions` (
   INDEX `idx_agent_id` (`agent_id`),
   INDEX `idx_status` (`status`),
   INDEX `idx_voucher_id` (`voucher_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_billing_payments' => <<<SQL
 CREATE TABLE `agent_billing_payments` (
@@ -285,7 +285,7 @@ CREATE TABLE `agent_billing_payments` (
   CONSTRAINT `fk_agent_billing_payments_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON DELETE CASCADE,
   INDEX `idx_agent_id` (`agent_id`),
   INDEX `idx_invoice_id` (`invoice_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'payment_gateway_config' => <<<SQL
 CREATE TABLE `payment_gateway_config` (
@@ -301,7 +301,7 @@ CREATE TABLE `payment_gateway_config` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `unique_gateway` (`gateway_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'agent_profile_pricing' => <<<SQL
 CREATE TABLE `agent_profile_pricing` (
@@ -322,7 +322,7 @@ CREATE TABLE `agent_profile_pricing` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_agent_profile_pricing_agent` FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON DELETE CASCADE,
   UNIQUE KEY `unique_agent_profile` (`agent_id`, `profile_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'public_sales' => <<<SQL
 CREATE TABLE `public_sales` (
@@ -365,7 +365,7 @@ CREATE TABLE `public_sales` (
   INDEX `idx_status` (`status`),
   INDEX `idx_customer_phone` (`customer_phone`),
   INDEX `idx_created_at` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'payment_methods' => <<<SQL
 CREATE TABLE `payment_methods` (
@@ -389,7 +389,7 @@ CREATE TABLE `payment_methods` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `unique_gateway_method` (`gateway_name`, `method_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'voucher_settings' => <<<SQL
 CREATE TABLE `voucher_settings` (
@@ -399,7 +399,7 @@ CREATE TABLE `voucher_settings` (
   `description` TEXT,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'site_pages' => <<<SQL
 CREATE TABLE `site_pages` (
@@ -410,7 +410,7 @@ CREATE TABLE `site_pages` (
   `is_active` TINYINT(1) DEFAULT 1,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
 ];
 
@@ -466,6 +466,12 @@ $defaultAgentSettings = [
     ['agent_id' => $agentDemoId, 'key' => 'voucher_prefix_agent', 'value' => 'AG'],
     ['agent_id' => $agentDemoId, 'key' => 'whatsapp_gateway_url', 'value' => 'https://api.whatsapp.com'],
     ['agent_id' => $agentDemoId, 'key' => 'whatsapp_token', 'value' => ''],
+    // Digiflazz settings
+    ['agent_id' => $agentDemoId, 'key' => 'digiflazz_enabled', 'value' => '0'],
+    ['agent_id' => $agentDemoId, 'key' => 'digiflazz_username', 'value' => ''],
+    ['agent_id' => $agentDemoId, 'key' => 'digiflazz_api_key', 'value' => ''],
+    ['agent_id' => $agentDemoId, 'key' => 'digiflazz_is_production', 'value' => '0'],
+    ['agent_id' => $agentDemoId, 'key' => 'default_markup_nominal', 'value' => '300'],
 ];
 
 $settingStmt = $pdo->prepare("INSERT INTO agent_settings (agent_id, setting_key, setting_value) VALUES (:agent, :key, :value)
@@ -572,6 +578,29 @@ CREATE TABLE `billing_portal_otps` (
   PRIMARY KEY (`id`),
   KEY `idx_customer_identifier` (`customer_id`, `identifier`),
   KEY `idx_expires_at` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SQL,
+    'digiflazz_products' => <<<SQL
+CREATE TABLE `digiflazz_products` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `buyer_sku_code` VARCHAR(50) NOT NULL,
+  `product_name` VARCHAR(150) NOT NULL,
+  `brand` VARCHAR(100) DEFAULT NULL,
+  `category` VARCHAR(50) DEFAULT NULL,
+  `type` ENUM('prepaid','postpaid') DEFAULT 'prepaid',
+  `price` INT NOT NULL,
+  `buyer_price` INT DEFAULT NULL,
+  `seller_price` INT DEFAULT NULL,
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `desc_header` VARCHAR(150) DEFAULT NULL,
+  `desc_footer` TEXT DEFAULT NULL,
+  `icon_url` VARCHAR(255) DEFAULT NULL,
+  `allow_markup` TINYINT(1) DEFAULT 1,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `unique_buyer_sku` (`buyer_sku_code`),
+  INDEX `idx_brand` (`brand`),
+  INDEX `idx_category` (`category`),
+  INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
     'digiflazz_transactions' => <<<SQL
@@ -905,7 +934,19 @@ END");
 logMessage('Triggers diperbarui', 'ok');
 
 /**
- * 5. Ringkasan
+ * 6. Global Collation Fix (Obat Kuat)
+ * Pastikan semua tabel (termasuk yang sudah ada sebelumnya) menggunakan utf8mb4_unicode_ci
+ */
+logMessage('--- Menyamakan Collation Semua Tabel ---');
+$allTables = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'")->fetchAll(PDO::FETCH_COLUMN);
+foreach ($allTables as $tbl) {
+    // Skip jika tabel bukan bagian dari sistem ini (opsional, tapi aman untuk semua)
+    $pdo->exec("ALTER TABLE `{$tbl}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+}
+logMessage('Semua tabel dikonversi ke utf8mb4_unicode_ci', 'ok');
+
+/**
+ * 7. Ringkasan
  */
 logMessage('=== Perbaikan selesai ===', 'ok');
 
