@@ -498,6 +498,12 @@ function processCommand($phone, $message) {
             checkPPPoEOffline($phone);
             return;
         }
+        // Command: SALDO DIGIFLAZZ - Cek saldo Digiflazz
+        // Example: SALDO DIGIFLAZZ
+        elseif (in_array($messageLower, ['saldo digiflazz', 'cek saldo digiflazz', 'balance digiflazz'])) {
+            checkDigiflazzBalance($phone);
+            return;
+        }
     }
     
     // Invalid command - ignore (no response sent)
@@ -1923,6 +1929,9 @@ function sendHelp($phone) {
         $message .= "Contoh: ENABLE HOTSPOT user123\n\n";
         $message .= "📴 *PPPOE OFFLINE* atau *PPP OFFLINE*\n";
         $message .= "Cek PPPoE yang tidak terkoneksi\n\n";
+        $message .= "💰 *SALDO DIGIFLAZZ*\n";
+        $message .= "Cek saldo Digiflazz saat ini\n";
+        $message .= "Contoh: SALDO DIGIFLAZZ\n\n";
     }
     
     $message .= "❓ *HELP*\n";
@@ -2327,6 +2336,56 @@ function sendDigiflazzResult($phone, $product, $customerNo, $price, $serialNumbe
     error_log("Sending Digiflazz result to {$phone}: Status={$statusText}, Length=" . strlen($resultMsg));
     
     sendWhatsAppMessage($phone, $resultMsg);
+}
+
+/**
+ * Check Digiflazz Balance (Admin Only)
+ */
+function checkDigiflazzBalance($phone) {
+    // Load required classes
+    if (!class_exists('DigiflazzClient')) {
+        require_once('../lib/DigiflazzClient.class.php');
+    }
+    
+    try {
+        // Initialize Digiflazz client
+        $digiflazz = new DigiflazzClient();
+        
+        if (!$digiflazz->isEnabled()) {
+            sendWhatsAppMessage($phone, "❌ *DIGIFLAZZ TIDAK AKTIF*\n\nLayanan Digiflazz belum dikonfigurasi atau sedang dinonaktifkan.");
+            return;
+        }
+        
+        // Check balance
+        $balanceData = $digiflazz->checkBalance();
+        
+        if (!$balanceData['success']) {
+            sendWhatsAppMessage($phone, "❌ *GAGAL CEK SALDO*\n\nTidak dapat mengambil data saldo dari Digiflazz.\nSilakan coba lagi nanti.");
+            return;
+        }
+        
+        $balance = $balanceData['balance'];
+        $timestamp = date('d/m/Y H:i:s');
+        
+        // Format message
+        $message = "💰 *SALDO DIGIFLAZZ*\n\n";
+        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $message .= "Saldo Saat Ini:\n";
+        $message .= "*Rp " . number_format($balance, 0, ',', '.') . "*\n\n";
+        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $message .= "📅 Dicek pada: {$timestamp}\n";
+        $message .= "🔄 Ketik *SALDO DIGIFLAZZ* untuk cek ulang";
+        
+        sendWhatsAppMessage($phone, $message);
+        
+    } catch (Exception $e) {
+        $errorMsg = "❌ *ERROR CEK SALDO*\n\n";
+        $errorMsg .= "Terjadi kesalahan saat mengecek saldo Digiflazz.\n\n";
+        $errorMsg .= "Error: " . $e->getMessage();
+        
+        sendWhatsAppMessage($phone, $errorMsg);
+        error_log("Digiflazz balance check error: " . $e->getMessage());
+    }
 }
 
 // Return success response

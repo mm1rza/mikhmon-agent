@@ -38,6 +38,7 @@ $message = $eventData['message'] ?? '';
 $serialNumber = $eventData['serial_number'] ?? ($eventData['sn'] ?? '');
 $buyerSku = $eventData['buyer_sku_code'] ?? ($eventData['code'] ?? '');
 $customerNo = $eventData['target'] ?? ($eventData['customer_no'] ?? '');
+$buyerLastSaldo = $eventData['buyer_last_saldo'] ?? null;
 
 $digiflazzClient = null;
 $digiflazzSettings = [];
@@ -154,7 +155,7 @@ try {
         
         // Send notification to agent
         $notifier = new WhatsAppNotification();
-        $agentNotified = $notifier->notifyDigiflazzSuccess((int)$transaction['agent_id'], $notificationPayload);
+        $agentNotified = $notifier->notifyDigiflazzSuccess((int)$transaction['agent_id'], $notificationPayload, null, $buyerLastSaldo);
         
         // Send notification to customer if customer phone is available
         $customerPhone = $transaction['customer_no'] ?? '';
