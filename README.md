@@ -142,7 +142,8 @@ graph TB
    Akses `http://your-domain/fix_all_modules.php?key=fix-all-2024.
 
 ### Konfigurasi Tambahan
-untuk ROS-v7 rename folder hotspot menjadi hotspot-v6 dan rename folder hotspot7 menjadi hotspot
+untuk ROS-v7 rename folder hotspot menjadi hotspot-v6 dan rename folder hotspot7 menjadi hotspot <br>
+untuk ROS-v7 rename folder report menjadi report-v6 dan rename folder hotspot-v7 menjadi report
 
 #### WhatsApp Integration
 1. Setup webhook di gateway WhatsApp (Fonnte/Wablas/WooWA)
@@ -205,6 +206,7 @@ Project Link: [https://github.com/alijayanet/mikhmon-agent](https://github.com/a
   Made with ❤️ by Ali Jaya Net
 
 </p>
+
 
 
 
