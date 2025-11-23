@@ -2025,18 +2025,18 @@ function sendHelp($phone) {
     $message .= "Cari Device ID dari nomor telepon atau username PPPoE\n";
     $message .= "Contoh: CARIPERANGKAT 081234567890\n";
     $message .= "Contoh: CARIPERANGKAT user123\n\n";
-    $message .= "📡 *GANTIWIFI <SSID_BARU>*\n";
+    $message .= "📡 *GANTI WIFI <SSID_BARU>*\n";
     $message .= "Ubah WiFi SSID ONU Anda (untuk pelanggan terdaftar)\n";
-    $message .= "Contoh: GANTIWIFI ALIJAYA-GUEST\n\n";
-    $message .= "📡 *GANTIWIFI <DEVICE_ID> <SSID_BARU>*\n";
-    $message .= "Ubah WiFi SSID dengan detail (jika sudah tahu Device ID)\n";
-    $message .= "Contoh: GANTIWIFI 192168001001 ALIJAYA-NET\n\n";
-    $message .= "🔐 *GANTISANDI <PASSWORD_BARU>*\n";
+    $message .= "Contoh: GANTI WIFI ALIJAYA-GUEST\n\n";
+    $message .= "📡 *GANTI WIFI <NOMOR/USERNAME> <SSID_BARU>*\n";
+    $message .= "Ubah WiFi SSID Pelanggan (Admin)\n";
+    $message .= "Contoh: GANTI WIFI 081234567890 ALIJAYA-NET\n\n";
+    $message .= "🔐 *GANTI SANDI <PASSWORD_BARU>*\n";
     $message .= "Ubah WiFi Password ONU Anda (untuk pelanggan terdaftar)\n";
-    $message .= "Contoh: GANTISANDI password123456\n\n";
-    $message .= "🔐 *GANTISANDI <DEVICE_ID> <PASSWORD_BARU>*\n";
-    $message .= "Ubah WiFi Password dengan detail (jika sudah tahu Device ID)\n";
-    $message .= "Contoh: GANTISANDI 192168001001 password123456\n\n";
+    $message .= "Contoh: GANTI SANDI password123456\n\n";
+    $message .= "🔐 *GANTI SANDI <NOMOR/USERNAME> <PASSWORD_BARU>*\n";
+    $message .= "Ubah WiFi Password Pelanggan (Admin)\n";
+    $message .= "Contoh: GANTI SANDI 081234567890 password123456\n\n";
     
     // Admin-only commands
     $isAdmin = isAdminNumber($phone);
