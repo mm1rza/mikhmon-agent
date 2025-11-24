@@ -11,6 +11,55 @@ require_once(__DIR__ . '/../include/db_config.php');
 require_once(__DIR__ . '/../lib/BillingService.class.php');
 require_once(__DIR__ . '/../lib/PublicPayment.class.php');
 
+// Load GenieACS config in GLOBAL scope so constants are available everywhere
+$genieacsConfigPath = __DIR__ . '/../genieacs/config.php';
+if (file_exists($genieacsConfigPath)) {
+    require_once($genieacsConfigPath);
+    
+    // Define constants from variables if not already defined
+    if (!defined('GENIEACS_API_URL') && isset($genieacs_host)) {
+         $proto = $genieacs_protocol ?? 'http';
+         $port = $genieacs_port ?? 7557;
+         define('GENIEACS_API_URL', "$proto://$genieacs_host:$port");
+    }
+    
+    if (!defined('GENIEACS_USERNAME') && isset($genieacs_username)) define('GENIEACS_USERNAME', $genieacs_username);
+    if (!defined('GENIEACS_PASSWORD') && isset($genieacs_password)) define('GENIEACS_PASSWORD', $genieacs_password);
+    if (!defined('GENIEACS_TIMEOUT')) define('GENIEACS_TIMEOUT', $genieacs_timeout ?? 30);
+    if (!defined('GENIEACS_ENABLED')) define('GENIEACS_ENABLED', $genieacs_enabled ?? true);
+    
+    // WiFi Paths
+    if (!defined('GENIEACS_WIFI_SSID_PATH')) define('GENIEACS_WIFI_SSID_PATH', 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID');
+    if (!defined('GENIEACS_WIFI_PASSWORD_PATH')) define('GENIEACS_WIFI_PASSWORD_PATH', 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase');
+}
+
+// Absolute fallback - ensure constants exist
+if (!defined('GENIEACS_API_URL')) define('GENIEACS_API_URL', 'http://localhost:7557');
+if (!defined('GENIEACS_USERNAME')) define('GENIEACS_USERNAME', '');
+if (!defined('GENIEACS_PASSWORD')) define('GENIEACS_PASSWORD', '');
+if (!defined('GENIEACS_TIMEOUT')) define('GENIEACS_TIMEOUT', 30);
+if (!defined('GENIEACS_ENABLED')) define('GENIEACS_ENABLED', false);
+if (!defined('GENIEACS_WIFI_SSID_PATH')) define('GENIEACS_WIFI_SSID_PATH', 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID');
+if (!defined('GENIEACS_WIFI_PASSWORD_PATH')) define('GENIEACS_WIFI_PASSWORD_PATH', 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase');
+
+/**
+ * Load GenieACS class (config already loaded in global scope)
+ */
+function loadGenieACSForPortal() {
+    if (class_exists('GenieACS')) {
+        return true;
+    }
+
+    // Load GenieACS class file
+    $genieacsClassPath = __DIR__ . '/../genieacs/lib/GenieACS.class.php';
+    if (file_exists($genieacsClassPath)) {
+        require_once($genieacsClassPath);
+        return true;
+    }
+    
+    return false;
+}
+
 if (!isset($_SESSION['billing_portal_customer_id']) || (int)$_SESSION['billing_portal_customer_id'] <= 0) {
     header('Location: billing_login.php');
     exit;
@@ -46,7 +95,146 @@ try {
         $amount = is_numeric($invoice['amount'] ?? null) ? (float)$invoice['amount'] : 0.0;
         return $carry + $amount;
     }, 0.0);
-    $deviceSnapshot = $billingService->getCustomerDeviceSnapshot((int)$customer['id']);
+    // $deviceSnapshot = $billingService->getCustomerDeviceSnapshot((int)$customer['id']); // Now populated from GenieACS below
+    $deviceSnapshot = []; // Will be populated from GenieACS
+
+    // Fetch current WiFi settings from GenieACS
+    $currentWiFi = [
+        'ssid' => null,
+        'password' => null,
+        'enabled' => null,
+        'error' => null
+    ];
+    
+    $wifiDebug = []; // Debug info - will remove after confirmation
+    
+    try {
+        // Load config first
+        loadGenieACSForPortal();
+        $wifiDebug[] = "Config loaded";
+        
+        // Check if GenieACS class is available
+        if (!class_exists('GenieACS')) {
+            throw new Exception('GenieACS class tidak tersedia.');
+        }
+        $wifiDebug[] = "GenieACS class available";
+        
+        $genieacs = new GenieACS();
+        $wifiDebug[] = "GenieACS instantiated";
+        
+        if ($genieacs->isEnabled()) {
+            $wifiDebug[] = "GenieACS is enabled";
+            
+            // Normalize phone
+            $phone = $customer['phone'] ?? '';
+            $wifiDebug[] = "Customer phone: $phone";
+            
+            $normalizedPhone = $phone;
+            if (substr($phone, 0, 2) === '62') {
+                $normalizedPhone = '0' . substr($phone, 2);
+            }
+            $wifiDebug[] = "Normalized phone: $normalizedPhone";
+            
+            // Query device by phone tag WITHOUT projection to get all data including VirtualParameters
+            $query = ['_tags' => $normalizedPhone];
+            $devicesResult = $genieacs->getDevices($query); // No projection - get all data
+            $wifiDebug[] = "Query without projection to get VirtualParameters";
+            
+            $wifiDebug[] = "Device query success: " . ($devicesResult['success'] ? 'YES' : 'NO');
+            $wifiDebug[] = "Devices found: " . count($devicesResult['data'] ?? []);
+            
+            if ($devicesResult['success'] && !empty($devicesResult['data'])) {
+                $device = $devicesResult['data'][0];
+                $wifiDebug[] = "Device ID: " . ($device['_id'] ?? 'N/A');
+                
+                // Use VirtualParameters like admin page does
+                $ssidPath = 'VirtualParameters.SSID';
+                $ssidPathAlt = 'VirtualParameters.SSID_ALL';
+                $passwordPath = 'InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase';
+                
+                // Check what keys exist in device
+                $wifiDebug[] = "Device has " . count($device) . " parameters";
+                
+                // Show all parameter keys for debugging
+                $paramKeys = array_keys($device);
+                $wifiDebug[] = "Parameter keys: " . implode(', ', array_slice($paramKeys, 0, 20)); // Show first 20
+                
+                // Debug VirtualParameters content
+                if (isset($device['VirtualParameters'])) {
+                    $vpKeys = array_keys($device['VirtualParameters']);
+                    $wifiDebug[] = "VirtualParameters has " . count($vpKeys) . " keys: " . implode(', ', array_slice($vpKeys, 0, 15));
+                } else {
+                    $wifiDebug[] = "VirtualParameters not found in device";
+                }
+                
+                // Parse SSID from VirtualParameters - try multiple possible names
+                $ssidFound = false;
+                
+                // Try common SSID parameter names
+                $possibleSSIDKeys = ['SSID', 'SSID_ALL', 'WlanSSID', 'wlanSSID', 'ssid', 'Ssid'];
+                foreach ($possibleSSIDKeys as $key) {
+                    if (isset($device['VirtualParameters'][$key])) {
+                        $currentWiFi['ssid'] = $device['VirtualParameters'][$key]['_value'] ?? $device['VirtualParameters'][$key];
+                        $wifiDebug[] = "SSID found in VirtualParameters.$key: " . ($currentWiFi['ssid'] ?? 'NULL');
+                        $ssidFound = true;
+                        break;
+                    }
+                }
+                
+                if (!$ssidFound) {
+                    $wifiDebug[] = "SSID not found in VirtualParameters (tried: " . implode(', ', $possibleSSIDKeys) . ")";
+                    
+                    // Try to get from raw TR-069 path as fallback
+                    if (isset($device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['SSID'])) {
+                        $currentWiFi['ssid'] = $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['SSID']['_value'] ?? null;
+                        $wifiDebug[] = "SSID found in raw TR-069 path: " . ($currentWiFi['ssid'] ?? 'NULL');
+                    } else {
+                        $wifiDebug[] = "SSID not found in raw TR-069 path either";
+                    }
+                }
+                
+                // Get password from WlanPassword VirtualParameter
+                if (isset($device['VirtualParameters']['WlanPassword'])) {
+                    $currentWiFi['password'] = $device['VirtualParameters']['WlanPassword']['_value'] ?? $device['VirtualParameters']['WlanPassword'];
+                    $wifiDebug[] = "Password found in VirtualParameters.WlanPassword: SET";
+                } else {
+                    $wifiDebug[] = "WlanPassword not found in VirtualParameters";
+                }
+                
+                // WiFi enabled status
+                if (isset($device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['Enable'])) {
+                    $currentWiFi['enabled'] = $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['Enable']['_value'] ?? null;
+                    $wifiDebug[] = "WiFi enabled: " . ($currentWiFi['enabled'] ?? 'NULL');
+                }
+                
+                // Populate ONU device snapshot from GenieACS data
+                $deviceSnapshot = [
+                    'status' => 'online', // Device found means online
+                    'device_id' => $device['_id'] ?? 'N/A',
+                    'pppoe_username' => $device['VirtualParameters']['pppoeUsername']['_value'] ?? $device['VirtualParameters']['pppoeUsername'] ?? 'N/A',
+                    'connected_devices' => $device['VirtualParameters']['activedevices']['_value'] ?? $device['VirtualParameters']['activedevices'] ?? 'N/A',
+                    'rx_power' => $device['VirtualParameters']['RXPower']['_value'] ?? $device['VirtualParameters']['RXPower'] ?? 'N/A',
+                    'temperature' => $device['VirtualParameters']['gettemp']['_value'] ?? $device['VirtualParameters']['gettemp'] ?? 'N/A',
+                    'serial_number' => $device['VirtualParameters']['getSerialNumber']['_value'] ?? $device['VirtualParameters']['getSerialNumber'] ?? 'N/A',
+                    'pppoe_ip' => $device['VirtualParameters']['pppoeIP']['_value'] ?? $device['VirtualParameters']['pppoeIP'] ?? 'N/A',
+                ];
+                $wifiDebug[] = "ONU data populated from GenieACS";
+            } else {
+                $wifiDebug[] = "No device found with tag: $normalizedPhone";
+                // Set empty deviceSnapshot if no device found
+                $deviceSnapshot = [];
+            }
+        } else {
+            $wifiDebug[] = "GenieACS is DISABLED";
+        }
+    } catch (Throwable $e) {
+        $wifiDebug[] = "ERROR: " . $e->getMessage();
+        error_log("Billing Portal WiFi fetch error: " . $e->getMessage());
+        // Only show error if it's not about missing config
+        if (strpos($e->getMessage(), 'GENIEACS_API_URL') === false) {
+            $currentWiFi['error'] = $e->getMessage();
+        }
+    }
 
     // Handle payment request
     if (isset($_POST['pay_invoice'])) {
@@ -73,16 +261,52 @@ try {
         }
     }
 
+    // Handle WiFi changes
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['change_ssid'])) {
             $newSsid = trim($_POST['ssid'] ?? '');
 
-            if ($newSsid === '' || mb_strlen($newSsid) < 3) {
-                $wifiFeedback['ssid']['error'] = 'SSID minimal 3 karakter.';
+            if ($newSsid === '' || mb_strlen($newSsid) < 3 || mb_strlen($newSsid) > 32) {
+                $wifiFeedback['ssid']['error'] = 'SSID harus 3-32 karakter.';
             } else {
                 try {
-                    $billingService->changeCustomerWifi((int)$customer['id'], $newSsid, null);
-                    $wifiFeedback['ssid']['success'] = 'SSID baru berhasil dikirim. Hubungkan ulang perangkat setelah beberapa menit.';
+                    loadGenieACSForPortal();
+                    $genieacs = new GenieACS();
+                    
+                    if (!$genieacs->isEnabled()) {
+                        throw new Exception('GenieACS tidak aktif.');
+                    }
+                    
+                    // Normalize phone: 62xxx -> 0xxx
+                    $phone = $customer['phone'] ?? '';
+                    $normalizedPhone = $phone;
+                    if (substr($phone, 0, 2) === '62') {
+                        $normalizedPhone = '0' . substr($phone, 2);
+                    }
+                    
+                    // Query device by phone tag
+                    $query = ['_tags' => $normalizedPhone];
+                    $devicesResult = $genieacs->getDevices($query);
+                    
+                    if (!$devicesResult['success'] || empty($devicesResult['data'])) {
+                        throw new Exception('Device tidak ditemukan. Pastikan nomor HP terdaftar di GenieACS.');
+                    }
+                    
+                    $device = $devicesResult['data'][0];
+                    $deviceId = $device['_id'] ?? '';
+                    
+                    if (empty($deviceId)) {
+                        throw new Exception('Device ID tidak valid.');
+                    }
+                    
+                    // Change SSID
+                    $result = $genieacs->changeWiFi($deviceId, $newSsid, null);
+                    
+                    if ($result['success']) {
+                        $wifiFeedback['ssid']['success'] = 'SSID berhasil diubah. Perubahan akan diterapkan dalam beberapa saat.';
+                    } else {
+                        throw new Exception($result['message'] ?? 'Gagal mengubah SSID');
+                    }
                 } catch (Throwable $e) {
                     $wifiFeedback['ssid']['error'] = $e->getMessage();
                 }
@@ -96,8 +320,43 @@ try {
                 $wifiFeedback['password']['error'] = 'Password minimal 8 karakter.';
             } else {
                 try {
-                    $billingService->changeCustomerWifi((int)$customer['id'], null, $newPassword);
-                    $wifiFeedback['password']['success'] = 'Password WiFi berhasil dikirim. Gunakan password baru setelah perangkat tersinkron.';
+                    loadGenieACSForPortal();
+                    $genieacs = new GenieACS();
+                    
+                    if (!$genieacs->isEnabled()) {
+                        throw new Exception('GenieACS tidak aktif.');
+                    }
+                    
+                    // Normalize phone: 62xxx -> 0xxx
+                    $phone = $customer['phone'] ?? '';
+                    $normalizedPhone = $phone;
+                    if (substr($phone, 0, 2) === '62') {
+                        $normalizedPhone = '0' . substr($phone, 2);
+                    }
+                    
+                    // Query device by phone tag
+                    $query = ['_tags' => $normalizedPhone];
+                    $devicesResult = $genieacs->getDevices($query);
+                    
+                    if (!$devicesResult['success'] || empty($devicesResult['data'])) {
+                        throw new Exception('Device tidak ditemukan. Pastikan nomor HP terdaftar di GenieACS.');
+                    }
+                    
+                    $device = $devicesResult['data'][0];
+                    $deviceId = $device['_id'] ?? '';
+                    
+                    if (empty($deviceId)) {
+                        throw new Exception('Device ID tidak valid.');
+                    }
+                    
+                    // Change password
+                    $result = $genieacs->changeWiFi($deviceId, null, $newPassword);
+                    
+                    if ($result['success']) {
+                        $wifiFeedback['password']['success'] = 'Password berhasil diubah. Perubahan akan diterapkan dalam beberapa saat.';
+                    } else {
+                        throw new Exception($result['message'] ?? 'Gagal mengubah password');
+                    }
                 } catch (Throwable $e) {
                     $wifiFeedback['password']['error'] = $e->getMessage();
                 }
@@ -126,6 +385,7 @@ if (file_exists(__DIR__ . '/../include/theme.php')) {
     <meta name="theme-color" content="<?= $themecolor; ?>" />
     <link rel="stylesheet" type="text/css" href="../css/font-awesome/css/font-awesome.min.css" />
     <link rel="stylesheet" href="../css/mikhmon-ui.<?= $theme; ?>.min.css">
+    <link rel="stylesheet" href="css/billing_portal_mobile.css">
     <link rel="icon" href="../img/favicon.png" />
     <style>
         body { background-color: #ecf0f5; font-family: 'Source Sans Pro', Arial, sans-serif; }
@@ -299,6 +559,15 @@ if (file_exists(__DIR__ . '/../include/theme.php')) {
                         <div class="value device-status <?= htmlspecialchars($statusClass); ?>"><?= htmlspecialchars($statusLabel); ?></div>
                         <small style="color:#6b7280;">Terhubung ke ACS sebagai <?= htmlspecialchars($deviceSnapshot['device_id'] ?? 'N/A'); ?></small>
                     </div>
+                    
+                    <?php if (!empty($currentWiFi['ssid'])): ?>
+                    <div class="device-stat">
+                        <div class="label">SSID Aktif</div>
+                        <div class="value small" style="color: #0369a1;"><?= htmlspecialchars($currentWiFi['ssid']); ?></div>
+                        <small style="color:#6b7280;">Nama WiFi yang terlihat</small>
+                    </div>
+                    <?php endif; ?>
+                    
                     <div class="device-stat">
                         <div class="label">PPPoE Username</div>
                         <div class="value small"><?= htmlspecialchars($pppoeLabel ?: 'N/A'); ?></div>
@@ -330,26 +599,25 @@ if (file_exists(__DIR__ . '/../include/theme.php')) {
             <h3><i class="fa fa-file-text-o"></i> Riwayat Tagihan</h3>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="invoice-table">
-                    <thead>
-                        <tr>
-                            <th>Periode</th>
-                            <th>Nominal</th>
-                            <th>Jatuh Tempo</th>
-                            <th>Status</th>
-                            <th>Dibayar</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($invoices)): ?>
+            <?php if (empty($invoices)): ?>
+                <div class="alert alert-info" style="text-align:center;">
+                    <i class="fa fa-info-circle"></i> Belum ada invoice yang tercatat.
+                </div>
+            <?php else: ?>
+                <!-- Desktop Table View -->
+                <div class="table-responsive desktop-only">
+                    <table class="invoice-table">
+                        <thead>
                             <tr>
-                                <td colspan="6" style="text-align:center; padding: 20px; color:#6b7280;">
-                                    Belum ada invoice yang tercatat.
-                                </td>
+                                <th>Periode</th>
+                                <th>Nominal</th>
+                                <th>Jatuh Tempo</th>
+                                <th>Status</th>
+                                <th>Dibayar</th>
+                                <th>Aksi</th>
                             </tr>
-                        <?php else: ?>
+                        </thead>
+                        <tbody>
                             <?php foreach ($invoices as $invoice): ?>
                                 <?php $status = strtolower($invoice['status'] ?? 'unpaid'); ?>
                                 <tr>
@@ -372,10 +640,47 @@ if (file_exists(__DIR__ . '/../include/theme.php')) {
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mobile Card View -->
+                <div class="mobile-only">
+                    <?php foreach ($invoices as $invoice): ?>
+                        <?php $status = strtolower($invoice['status'] ?? 'unpaid'); ?>
+                        <div class="invoice-card-mobile">
+                            <div class="invoice-card-header">
+                                <div class="invoice-period"><?= htmlspecialchars($invoice['period']); ?></div>
+                                <span class="badge-status <?= $status; ?>"><?= ucfirst($status); ?></span>
+                            </div>
+                            <div class="invoice-card-body">
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Nominal:</span>
+                                    <span class="invoice-value">Rp <?= number_format($invoice['amount'], 0, ',', '.'); ?></span>
+                                </div>
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Jatuh Tempo:</span>
+                                    <span class="invoice-value"><?= date('d M Y', strtotime($invoice['due_date'])); ?></span>
+                                </div>
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Dibayar:</span>
+                                    <span class="invoice-value"><?= $invoice['paid_at'] ? date('d M Y H:i', strtotime($invoice['paid_at'])) : '-'; ?></span>
+                                </div>
+                            </div>
+                            <?php if (in_array($status, ['unpaid', 'overdue'])): ?>
+                            <div class="invoice-card-footer">
+                                <form method="post" style="width: 100%;">
+                                    <input type="hidden" name="invoice_id" value="<?= (int)$invoice['id']; ?>">
+                                    <button type="submit" name="pay_invoice" class="btn btn-success" style="width: 100%;">
+                                        <i class="fa fa-credit-card"></i> Bayar Sekarang
+                                    </button>
+                                </form>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -388,6 +693,12 @@ if (file_exists(__DIR__ . '/../include/theme.php')) {
             <?php if ((int)$customer['is_isolated'] === 1): ?>
                 <div class="alert alert-info">
                     Akun Anda sedang dalam kondisi isolasi. Pastikan tagihan sudah dibayar agar profil normal dikembalikan.
+                </div>
+            <?php endif; ?>
+
+            <?php if ($currentWiFi['error']): ?>
+                <div class="alert alert-warning">
+                    <strong>Perhatian:</strong> Tidak dapat mengambil data WiFi saat ini. <?= htmlspecialchars($currentWiFi['error']); ?>
                 </div>
             <?php endif; ?>
 
