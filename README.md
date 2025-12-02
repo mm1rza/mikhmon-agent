@@ -138,8 +138,9 @@ graph TB
    define('DB_NAME', 'mikhmon_agents');
    ```
 
-4. **Run Installer**
-   Akses `http://your-domain/fix_all_modules.php?key=fix-all-2024
+4. **Run Installer** <br>
+
+coppy paste link ini ke browser `http://your-domain/fix_all_modules.php?key=fix-all-2024
 
 ### Konfigurasi Tambahan
 
@@ -204,6 +205,7 @@ Project Link: [https://github.com/alijayanet/mikhmon-agent](https://github.com/a
   Made with ❤️ by Ali Jaya Net
 
 </p>
+
 
 
 
