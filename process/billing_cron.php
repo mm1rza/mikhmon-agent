@@ -209,11 +209,19 @@ function handleIsolation(BillingService $service, WhatsAppNotification $notifica
             continue;
         }
 
+        // Update isolation flag in database
         $service->updateCustomerIsolation((int)$customer['id'], 1);
+
+        // CRITICAL FIX: Apply isolation profile to MikroTik
+        // This will change PPPoE profile from normal to isolation and drop active session
+        $service->applyIsolationProfile($customer, $invoice);
+
+        // Log isolation event
         $service->logEvent((int)$customer['id'], (int)$invoice['id'], 'billing_isolation_applied', [
             'days_overdue' => $daysOverdue,
         ]);
 
+        // Send WhatsApp notification
         if (!empty($customer['phone'])) {
             $notification->notifyBillingIsolation($customer['phone'], [
                 'customer_name' => $customer['name'] ?? 'Pelanggan',
@@ -237,9 +245,14 @@ function handleIsolation(BillingService $service, WhatsAppNotification $notifica
             continue;
         }
 
-        $service->updateCustomerIsolation((int)$customer['id'], 0);
+        // CRITICAL FIX: Restore customer profile in MikroTik
+        // This will update is_isolated flag, change PPPoE profile back to normal, and drop active session
+        $service->restoreCustomerProfile((int)$customer['id']);
+
+        // Log restoration event for this specific invoice
         $service->logEvent((int)$customer['id'], (int)$latestInvoice['id'], 'billing_isolation_released');
 
+        // Send WhatsApp notification
         if (!empty($customer['phone'])) {
             $notification->notifyBillingRestored($customer['phone'], [
                 'customer_name' => $customer['name'] ?? 'Pelanggan',
