@@ -338,6 +338,26 @@ class VoucherGenerator {
         
         if (empty($api_url) || empty($api_key)) {
             // WhatsApp not configured, skip
+            error_log("VoucherGenerator: WhatsApp not configured (URL or API Key missing)");
+            return false;
+        }
+        
+        // Normalize phone number
+        $phone = $transaction['customer_phone'];
+        $phone = preg_replace('/[^0-9]/', '', $phone); // Remove non-numeric
+        
+        // Convert to 62xxx format
+        if (substr($phone, 0, 1) === '0') {
+            // 08xxx -> 628xxx
+            $phone = '62' . substr($phone, 1);
+        } elseif (substr($phone, 0, 2) !== '62') {
+            // xxx -> 62xxx (assume Indonesian number)
+            $phone = '62' . $phone;
+        }
+        
+        // Validate phone number (must start with 62 and have at least 10 digits)
+        if (substr($phone, 0, 2) !== '62' || strlen($phone) < 10) {
+            error_log("VoucherGenerator: Invalid phone number format: " . $transaction['customer_phone'] . " -> " . $phone);
             return false;
         }
         
@@ -355,9 +375,10 @@ class VoucherGenerator {
         $message .= "Voucher berlaku sesuai paket yang dipilih.\n\n";
         $message .= "_Simpan pesan ini untuk referensi Anda._";
         
-        // Send via API (Fonnte or similar)
-        $phone = $transaction['customer_phone'];
+        // Log before sending
+        error_log("VoucherGenerator: Sending WhatsApp to " . $phone . " for transaction " . $transaction['transaction_id']);
         
+        // Send via API (Fonnte or similar)
         $curl = curl_init();
         curl_setopt_array($curl, [
             CURLOPT_URL => $api_url,
@@ -374,9 +395,24 @@ class VoucherGenerator {
         ]);
         
         $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($curl);
         curl_close($curl);
         
-        return true;
+        // Log response
+        if ($curlError) {
+            error_log("VoucherGenerator: cURL Error: " . $curlError);
+            return false;
+        }
+        
+        error_log("VoucherGenerator: WhatsApp API Response (HTTP $httpCode): " . $response);
+        
+        // Check if successful (most WhatsApp APIs return 200 for success)
+        if ($httpCode >= 200 && $httpCode < 300) {
+            return true;
+        }
+        
+        return false;
     }
 }
 
