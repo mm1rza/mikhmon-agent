@@ -500,6 +500,9 @@ $defaultAgentSettings = [
     ['agent_id' => $agentDemoId, 'key' => 'voucher_prefix_agent', 'value' => 'AG'],
     ['agent_id' => $agentDemoId, 'key' => 'whatsapp_gateway_url', 'value' => 'https://api.whatsapp.com'],
     ['agent_id' => $agentDemoId, 'key' => 'whatsapp_token', 'value' => ''],
+    // WhatsApp API settings for VoucherGenerator (PUBLIC VOUCHER)
+    ['agent_id' => $agentDemoId, 'key' => 'whatsapp_api_url', 'value' => 'https://api.fonnte.com/send', 'type' => 'string', 'description' => 'WhatsApp API Gateway URL for public voucher delivery'],
+    ['agent_id' => $agentDemoId, 'key' => 'whatsapp_api_key', 'value' => '', 'type' => 'string', 'description' => 'WhatsApp API Key/Token - MUST BE CONFIGURED!'],
     // Digiflazz settings
     ['agent_id' => $agentDemoId, 'key' => 'digiflazz_enabled', 'value' => '0'],
     ['agent_id' => $agentDemoId, 'key' => 'digiflazz_username', 'value' => ''],
@@ -521,6 +524,7 @@ $defaultAgentSettings = [
     ['agent_id' => $agentDemoId, 'key' => 'payment_account_name', 'value' => 'Nama Pemilik', 'type' => 'string', 'description' => 'Nama Pemilik Rekening'],
     ['agent_id' => $agentDemoId, 'key' => 'payment_wa_confirm', 'value' => '08123456789', 'type' => 'string', 'description' => 'Nomor WhatsApp Konfirmasi'],
 ];
+
 
 $settingStmt = $pdo->prepare("INSERT INTO agent_settings (agent_id, setting_key, setting_value, setting_type, description) VALUES (:agent, :key, :value, :type, :description)
     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), setting_type = VALUES(setting_type), description = VALUES(description)");
