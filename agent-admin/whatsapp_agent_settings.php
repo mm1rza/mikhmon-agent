@@ -40,6 +40,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
             $stmt->execute([$numbersString, $numbersString]);
         }
         
+        // WhatsApp API Settings (for public voucher)
+        $apiSettings = [
+            'whatsapp_api_url' => $_POST['whatsapp_api_url'] ?? '',
+            'whatsapp_api_key' => $_POST['whatsapp_api_key'] ?? ''
+        ];
+        
+        foreach ($apiSettings as $key => $value) {
+            $description = $key === 'whatsapp_api_url' ? 'WhatsApp API Gateway URL for public voucher' : 'WhatsApp API Key/Token';
+            $stmt = $db->prepare("
+                INSERT INTO agent_settings (agent_id, setting_key, setting_value, setting_type, description, updated_by) 
+                VALUES (1, ?, ?, 'string', ?, 'admin')
+                ON DUPLICATE KEY UPDATE setting_value = ?, updated_by = 'admin'
+            ");
+            $stmt->execute([$key, $value, $description, $value]);
+        }
+        
         // Message Settings
         $settings = [
             'wa_message_header' => $_POST['message_header'] ?? '',
@@ -71,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
 
 // Load current settings
 $db = getDBConnection();
-$stmt = $db->query("SELECT setting_key, setting_value FROM agent_settings WHERE setting_key LIKE 'admin_whatsapp_numbers' OR setting_key LIKE 'wa_%'");
+$stmt = $db->query("SELECT setting_key, setting_value FROM agent_settings WHERE setting_key LIKE 'admin_whatsapp_numbers' OR setting_key LIKE 'wa_%' OR setting_key LIKE 'whatsapp_api_%'");
 $currentSettings = [];
 while ($row = $stmt->fetch()) {
     $currentSettings[$row['setting_key']] = $row['setting_value'];
@@ -80,6 +96,8 @@ while ($row = $stmt->fetch()) {
 // Default values
 $defaults = [
     'admin_whatsapp_numbers' => '',
+    'whatsapp_api_url' => 'https://api.fonnte.com/send',
+    'whatsapp_api_key' => '',
     'wa_message_header' => '╔═══════════════════╗
 ║  🎫 VOUCHER WIFI  ║
 ╚═══════════════════╝',
@@ -330,6 +348,34 @@ input.form-control:focus {
                 </div>
             </div>
 
+            <!-- WhatsApp API Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa fa-cog"></i> WhatsApp API (Public Voucher)</h3>
+                </div>
+                <div class="card-body">
+                <div class="form-group">
+                    <label>WhatsApp API URL</label>
+                    <input type="text" name="whatsapp_api_url" class="form-control" value="<?= htmlspecialchars($currentSettings['whatsapp_api_url']); ?>" placeholder="https://api.fonnte.com/send">
+                    <div class="help-text">
+                        • URL gateway WhatsApp untuk pengiriman voucher public<br>
+                        • Contoh: https://api.fonnte.com/send, https://wablas.com/api/send-message
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>WhatsApp API Key</label>
+                    <input type="text" name="whatsapp_api_key" class="form-control" value="<?= htmlspecialchars($currentSettings['whatsapp_api_key']); ?>" placeholder="Masukkan API Key">
+                    <div class="help-text">
+                        • API Key/Token dari provider WhatsApp gateway Anda<br>
+                        • <strong style="color: #d9534f;">WAJIB DIISI</strong> agar voucher public bisa dikirim via WhatsApp
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-grid">
             <!-- Business Info -->
             <div class="card">
                 <div class="card-header">
