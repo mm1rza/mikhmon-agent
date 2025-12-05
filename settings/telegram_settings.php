@@ -33,35 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt->execute([$key, $value, $value]);
             }
             
-            // Update config file
-            $configFile = '../include/telegram_config.php';
-            $configContent = file_get_contents($configFile);
-            
-            // Update bot token
-            $configContent = preg_replace(
-                "/define\('TELEGRAM_BOT_TOKEN', '.*?'\);/",
-                "define('TELEGRAM_BOT_TOKEN', '{$settings['telegram_bot_token']}');",
-                $configContent
-            );
-            
-            // Update enabled status
-            $enabledValue = $settings['telegram_enabled'] == '1' ? 'true' : 'false';
-            $configContent = preg_replace(
-                "/define\('TELEGRAM_ENABLED', .*?\);/",
-                "define('TELEGRAM_ENABLED', $enabledValue);",
-                $configContent
-            );
-            
-            // Update webhook mode
-            $webhookValue = $settings['telegram_webhook_mode'] == '1' ? 'true' : 'false';
-            $configContent = preg_replace(
-                "/define\('TELEGRAM_WEBHOOK_MODE', .*?\);/",
-                "define('TELEGRAM_WEBHOOK_MODE', $webhookValue);",
-                $configContent
-            );
-            
-            file_put_contents($configFile, $configContent);
-            
             $message = 'Settings saved successfully!';
             $messageType = 'success';
         } catch (Exception $e) {
