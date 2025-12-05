@@ -130,13 +130,11 @@ graph TB
    ```
 
 3. **Konfigurasi Database**
-   Edit file `include/db_config.php`:
+   Edit file `include/db_config.php`: atau jalankan
    ```php
-   define('DB_HOST', 'localhost');
-   define('DB_USER', 'your_db_user');
-   define('DB_PASS', 'your_db_password');
-   define('DB_NAME', 'mikhmon_agents');
+   https://domain.anda/install.php
    ```
+kalau sudah sukses abaikan perintah no 4
 
 4. **Run Installer** <br>
 
@@ -144,7 +142,7 @@ coppy paste link ini ke browser<br>
 ```
 http://ganti_dengan_domain_anda/fix_all_modules.php?key=fix-all-2024
 ```
-### Konfigurasi Tambahan Cronjob
+5. ### Konfigurasi Tambahan Cronjob
 coppy paste link ini ke browser<br> 
 ```
 http://ganti_dengan_domain_anda/check_cron_path.php
@@ -213,6 +211,7 @@ Project Link: [https://github.com/alijayanet/mikhmon-agent](https://github.com/a
   Made with ❤️ by Ali Jaya Net
 
 </p>
+
 
 
 
