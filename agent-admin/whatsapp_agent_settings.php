@@ -75,37 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
             $telegramStmt->execute([$key, $value, $value]);
         }
         
-        // Update telegram_config.php file
-        $telegramConfigFile = '../include/telegram_config.php';
-        if (file_exists($telegramConfigFile)) {
-            $configContent = file_get_contents($telegramConfigFile);
-            
-            // Update bot token
-            $configContent = preg_replace(
-                "/define\('TELEGRAM_BOT_TOKEN', '.*?'\);/",
-                "define('TELEGRAM_BOT_TOKEN', '{$telegramSettings['telegram_bot_token']}');",
-                $configContent
-            );
-            
-            // Update enabled status
-            $enabledValue = $telegramSettings['telegram_enabled'] == '1' ? 'true' : 'false';
-            $configContent = preg_replace(
-                "/define\('TELEGRAM_ENABLED', .*?\);/",
-                "define('TELEGRAM_ENABLED', $enabledValue);",
-                $configContent
-            );
-            
-            // Update webhook mode
-            $webhookValue = $telegramSettings['telegram_webhook_mode'] == '1' ? 'true' : 'false';
-            $configContent = preg_replace(
-                "/define\('TELEGRAM_WEBHOOK_MODE', .*?\);/",
-                "define('TELEGRAM_WEBHOOK_MODE', $webhookValue);",
-                $configContent
-            );
-            
-            file_put_contents($telegramConfigFile, $configContent);
-        }
-        
         // Message Settings
         $settings = [
             'wa_message_header' => $_POST['message_header'] ?? '',
