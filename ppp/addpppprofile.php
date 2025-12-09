@@ -64,8 +64,8 @@ if (!isset($_SESSION["mikhmon"])) {
         $isolir_profile_escaped = str_replace('\\', '\\\\', $isolir_profile);
         $isolir_profile_escaped = str_replace('"', '\\"', $isolir_profile_escaped);
         
-        // Generate script based on user example
-        $profile_script = ':local pengguna $"user"; :local date [/system clock get date]; :local time [/system clock get time]; :log info "User PPPoE $pengguna login pada $time tanggal $date"; { :if ([/system scheduler find name="exp-$pengguna"]="") do={ /system scheduler add name="exp-$pengguna" interval="' . $isolir_interval . '" on-event="/ppp secret set profile=\"' . $isolir_profile_escaped . '\" [find name=\\$pengguna]; /ppp active remove [find name=\\$pengguna]; :log warning \"User \\$pengguna expired dan dipindah ke profile ' . $isolir_profile_escaped . '\"; /system scheduler remove [find name=\"exp-\\$pengguna\"]"; :log info "Scheduler auto expiry dibuat untuk user $pengguna (' . $isolir_interval . ')"; } }';
+        // Generate script without exp- prefix for consistency
+        $profile_script = ':local pengguna $"user"; :local date [/system clock get date]; :local time [/system clock get time]; :log info "User PPPoE $pengguna login pada $time tanggal $date"; { :if ([/system scheduler find name="$pengguna"]="") do={ /system scheduler add name="$pengguna" interval="' . $isolir_interval . '" on-event="/ppp secret set profile=\"' . $isolir_profile_escaped . '\" [find name=\\$pengguna]; /ppp active remove [find name=\\$pengguna]; :log warning \"User \\$pengguna expired dan dipindah ke profile ' . $isolir_profile_escaped . '\"; /system scheduler remove [find name=\"\\$pengguna\"]"; :log info "Scheduler auto expiry dibuat untuk user $pengguna (' . $isolir_interval . ')"; :local userID [/ppp secret find name=$pengguna]; :if ($userID != "") do={ /ppp secret set $userID comment="AUTO-ISOLIR: Scheduler dibuat pada $date $time, expire ' . $isolir_interval . '"; }; } }';
       }
     }
 
@@ -252,6 +252,36 @@ if (!isset($_SESSION["mikhmon"])) {
               </td>
             </tr>
             <tr>
+              <td colspan="2" style="background-color: #e8f4fd; padding: 10px; border-left: 4px solid #007bff;">
+                <strong><i class="fa fa-ban"></i> Profile ISOLIR Template</strong>
+                <small class="text-muted d-block mt-1">Template untuk membuat profile isolir dengan mudah</small>
+              </td>
+            </tr>
+            <tr>
+              <td class="align-middle">Buat Profile ISOLIR</td>
+              <td>
+                <label>
+                  <input type="checkbox" name="create_isolir_profile" id="create_isolir_profile" onchange="toggleIsolirTemplate()">
+                  Gunakan template profile ISOLIR (rate limit rendah + script auto-delete scheduler)
+                </label>
+                <small class="text-muted d-block">Profile ini digunakan sebagai target isolir untuk user yang masa aktifnya habis</small>
+              </td>
+            </tr>
+            <tr id="isolir_template_info" style="display: none;">
+              <td class="align-middle">Template Settings</td>
+              <td>
+                <div class="alert alert-info" style="margin: 0; padding: 10px;">
+                  <strong><i class="fa fa-info-circle"></i> Template akan mengisi:</strong>
+                  <ul style="margin: 5px 0 0 20px; padding: 0;">
+                    <li>Rate Limit: 64k/64k (sangat rendah)</li>
+                    <li>Script: Auto-delete scheduler saat user login</li>
+                    <li>Only One: yes (satu koneksi per user)</li>
+                  </ul>
+                  <small class="text-warning"><i class="fa fa-warning"></i> Jangan aktifkan Auto Isolir pada profile ISOLIR ini!</small>
+                </div>
+              </td>
+            </tr>
+            <tr>
               <td colspan="2" style="background-color: #f0f0f0; padding: 10px;">
                 <strong><i class="fa fa-shield"></i> Auto Isolir Settings</strong>
               </td>
@@ -319,6 +349,45 @@ if (!isset($_SESSION["mikhmon"])) {
     upName.focus();
   }
   
+  function toggleIsolirTemplate() {
+    var templateCheckbox = document.getElementById('create_isolir_profile');
+    var templateInfo = document.getElementById('isolir_template_info');
+    var enableIsolir = document.getElementById('enable_isolir');
+    
+    if (templateCheckbox.checked) {
+      templateInfo.style.display = '';
+      
+      // Fill template values
+      document.getElementsByName('name')[0].value = 'ISOLIR';
+      document.getElementsByName('retelimit')[0].value = '64k/64k';
+      document.getElementById('onlyone').value = 'yes';
+      
+      // Set isolir script
+      var isolirScript = ':local pengguna $"user"; :local date [/system clock get date]; :local time [/system clock get time]; :log warning "User $pengguna login menggunakan profile ISOLIR pada $time tanggal $date"; :local schedulerName "$pengguna"; :local schedulerID [/system scheduler find name=$schedulerName]; :if ($schedulerID != "") do={ /system scheduler remove $schedulerID; :log info "Scheduler \'$schedulerName\' berhasil dihapus karena user $pengguna menggunakan profile isolir"; :local userID [/ppp secret find name=$pengguna]; :if ($userID != "") do={ /ppp secret set $userID comment="ISOLIR: Scheduler dihapus pada $date $time"; :log info "Comment user $pengguna diupdate: scheduler dihapus"; } } else={ :log info "Tidak ada scheduler \'$schedulerName\' yang perlu dihapus untuk user $pengguna"; :local userID [/ppp secret find name=$pengguna]; :if ($userID != "") do={ /ppp secret set $userID comment="ISOLIR: Login dengan profile isolir pada $date $time"; :log info "Comment user $pengguna diupdate: login isolir tanpa scheduler"; } }';
+      document.getElementById('profile_script').value = isolirScript;
+      
+      // Disable auto isolir for this profile
+      enableIsolir.checked = false;
+      enableIsolir.disabled = true;
+      toggleIsolirFields();
+      
+      // Show warning
+      alert('Template ISOLIR telah diterapkan!\n\nPERINGATAN: Jangan aktifkan Auto Isolir pada profile ISOLIR ini.\nProfile ini digunakan sebagai target isolir untuk user lain.');
+      
+    } else {
+      templateInfo.style.display = 'none';
+      
+      // Clear template values
+      document.getElementsByName('name')[0].value = '';
+      document.getElementsByName('retelimit')[0].value = '';
+      document.getElementById('onlyone').value = 'default';
+      document.getElementById('profile_script').value = '';
+      
+      // Re-enable auto isolir
+      enableIsolir.disabled = false;
+    }
+  }
+  
   function toggleIsolirFields() {
     var enableCheckbox = document.getElementById('enable_isolir');
     var profileRow = document.getElementById('isolir_profile_row');
@@ -337,7 +406,7 @@ if (!isset($_SESSION["mikhmon"])) {
         var isolirInterval = document.getElementById('isolir_interval').value;
         
         if (isolirProfile && isolirInterval && isolirInterval.length > 1) {
-          var generatedScript = ':local pengguna $"user"; :local date [/system clock get date]; :local time [/system clock get time]; :log info "User PPPoE $pengguna login pada $time tanggal $date"; { :if ([/system scheduler find name="exp-$pengguna"]="") do={ /system scheduler add name="exp-$pengguna" interval="' + isolirInterval + '" on-event="/ppp secret set profile=\\"' + isolirProfile + '\\" [find name=\\$pengguna]; /ppp active remove [find name=\\$pengguna]; :log warning \\"User \\$pengguna expired dan dipindah ke profile ' + isolirProfile + '\\"; /system scheduler remove [find name=\\"exp-\\$pengguna\\"]"; :log info "Scheduler auto expiry dibuat untuk user $pengguna (' + isolirInterval + ')"; } }';
+          var generatedScript = ':local pengguna $"user"; :local date [/system clock get date]; :local time [/system clock get time]; :log info "User PPPoE $pengguna login pada $time tanggal $date"; { :if ([/system scheduler find name="$pengguna"]="") do={ /system scheduler add name="$pengguna" interval="' + isolirInterval + '" on-event="/ppp secret set profile=\\"' + isolirProfile + '\\" [find name=\\$pengguna]; /ppp active remove [find name=\\$pengguna]; :log warning \\"User \\$pengguna expired dan dipindah ke profile ' + isolirProfile + '\\"; /system scheduler remove [find name=\\"\\$pengguna\\"]"; :log info "Scheduler auto expiry dibuat untuk user $pengguna (' + isolirInterval + ')"; :local userID [/ppp secret find name=$pengguna]; :if ($userID != "") do={ /ppp secret set $userID comment="AUTO-ISOLIR: Scheduler dibuat pada $date $time, expire ' + isolirInterval + '"; }; } }';
           scriptField.value = generatedScript;
         }
       }
