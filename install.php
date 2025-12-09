@@ -643,9 +643,6 @@ function ensureAgent($pdo, $code, $name, $status = 'active') {
                                 `agent_name` VARCHAR(100) NOT NULL,
                                 `email` VARCHAR(100),
                                 `phone` VARCHAR(20),
-                                `telegram_chat_id` VARCHAR(50) DEFAULT NULL,
-                                `telegram_username` VARCHAR(100) DEFAULT NULL,
-                                `preferred_channel` ENUM('whatsapp', 'telegram', 'both') DEFAULT 'whatsapp',
                                 `password` VARCHAR(255),
                                 `address` TEXT,
                                 `balance` DECIMAL(15,2) DEFAULT 0.00,
@@ -659,7 +656,6 @@ function ensureAgent($pdo, $code, $name, $status = 'active') {
                                 `notes` TEXT,
                                 UNIQUE KEY `unique_agent_code` (`agent_code`),
                                 KEY `idx_agent_code` (`agent_code`),
-                                KEY `idx_telegram_chat_id` (`telegram_chat_id`),
                                 KEY `idx_status` (`status`)
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
                             
@@ -966,7 +962,6 @@ function ensureAgent($pdo, $code, $name, $status = 'active') {
                                 `profile_id` INT UNSIGNED NOT NULL,
                                 `name` VARCHAR(150) NOT NULL,
                                 `phone` VARCHAR(32) DEFAULT NULL,
-                                `telegram_chat_id` VARCHAR(50) DEFAULT NULL,
                                 `email` VARCHAR(150) DEFAULT NULL,
                                 `address` TEXT DEFAULT NULL,
                                 `service_number` VARCHAR(100) DEFAULT NULL,
@@ -982,7 +977,6 @@ function ensureAgent($pdo, $code, $name, $status = 'active') {
                                 `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                                 PRIMARY KEY (`id`),
                                 KEY `idx_profile_id` (`profile_id`),
-                                KEY `idx_telegram_chat_id` (`telegram_chat_id`),
                                 KEY `idx_billing_day` (`billing_day`),
                                 CONSTRAINT `fk_billing_customers_profile` FOREIGN KEY (`profile_id`) REFERENCES `billing_profiles`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -1337,6 +1331,37 @@ function ensureAgent($pdo, $code, $name, $status = 'active') {
                                 $stmt->execute(['telegram_bot_token', $telegramBotToken, $telegramBotToken]);
                                 $stmt->execute(['telegram_webhook_mode', $telegramWebhookMode, $telegramWebhookMode]);
                                 $stmt->execute(['telegram_admin_chat_ids', $telegramAdminChatIds, $telegramAdminChatIds]);
+                                
+                                // Update config file
+                                $configFile = 'include/telegram_config.php';
+                                if (file_exists($configFile)) {
+                                    $configContent = file_get_contents($configFile);
+                                    
+                                    // Update bot token
+                                    $configContent = preg_replace(
+                                        "/define\('TELEGRAM_BOT_TOKEN', '.*?'\);/",
+                                        "define('TELEGRAM_BOT_TOKEN', '$telegramBotToken');",
+                                        $configContent
+                                    );
+                                    
+                                    // Update enabled status
+                                    $enabledValue = $telegramEnabled == '1' ? 'true' : 'false';
+                                    $configContent = preg_replace(
+                                        "/define\('TELEGRAM_ENABLED', .*?\);/",
+                                        "define('TELEGRAM_ENABLED', $enabledValue);",
+                                        $configContent
+                                    );
+                                    
+                                    // Update webhook mode
+                                    $webhookValue = $telegramWebhookMode == '1' ? 'true' : 'false';
+                                    $configContent = preg_replace(
+                                        "/define\('TELEGRAM_WEBHOOK_MODE', .*?\);/",
+                                        "define('TELEGRAM_WEBHOOK_MODE', $webhookValue);",
+                                        $configContent
+                                    );
+                                    
+                                    file_put_contents($configFile, $configContent);
+                                }
                                 
                                 logMessage('✅ Telegram bot configured successfully!', 'success');
                                 echo '<div class="alert alert-success" style="margin-bottom: 20px;">
