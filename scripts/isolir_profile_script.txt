@@ -1,0 +1,39 @@
+# Script untuk Profile ISOLIR
+# Script ini dijalankan saat user login menggunakan profile isolir
+# Fungsi: Menghapus scheduler auto-expiry yang dibuat sebelumnya
+
+:local pengguna $"user"
+:local date [/system clock get date]
+:local time [/system clock get time]
+
+# Log informasi user login dengan profile isolir
+:log warning "User $pengguna login menggunakan profile ISOLIR pada $time tanggal $date"
+
+# Cari dan hapus scheduler dengan nama sama dengan username
+:local schedulerName "$pengguna"
+:local schedulerID [/system scheduler find name=$schedulerName]
+
+:if ($schedulerID != "") do={
+    # Hapus scheduler yang ditemukan
+    /system scheduler remove $schedulerID
+    :log info "Scheduler '$schedulerName' berhasil dihapus karena user $pengguna menggunakan profile isolir"
+    
+    # Update comment user untuk menandai bahwa scheduler sudah dihapus
+    :local userID [/ppp secret find name=$pengguna]
+    :if ($userID != "") do={
+        /ppp secret set $userID comment="ISOLIR: Scheduler dihapus pada $date $time"
+        :log info "Comment user $pengguna diupdate: scheduler dihapus"
+    }
+} else={
+    :log info "Tidak ada scheduler '$schedulerName' yang perlu dihapus untuk user $pengguna"
+    
+    # Update comment user untuk menandai bahwa user login dengan profile isolir
+    :local userID [/ppp secret find name=$pengguna]
+    :if ($userID != "") do={
+        /ppp secret set $userID comment="ISOLIR: Login dengan profile isolir pada $date $time"
+        :log info "Comment user $pengguna diupdate: login isolir tanpa scheduler"
+    }
+}
+
+# Optional: Bisa ditambahkan notifikasi atau aksi lain
+# Contoh: kirim notifikasi ke Telegram, email, dll
