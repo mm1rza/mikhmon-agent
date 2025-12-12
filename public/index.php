@@ -31,10 +31,29 @@ try {
         die('Agent not found or inactive');
     }
     
-    // Get active pricing
-    $stmt = $conn->prepare("SELECT * FROM agent_profile_pricing 
-                           WHERE agent_id = :agent_id AND is_active = 1 
-                           ORDER BY is_featured DESC, sort_order, id");
+    // Get active pricing from agent_prices table - ordered by price (lowest to highest)
+    $stmt = $conn->prepare("SELECT 
+                               ap.id,
+                               ap.agent_id,
+                               ap.profile_name,
+                               ap.buy_price,
+                               ap.sell_price as price,
+                               ap.profile_name as display_name,
+                               CONCAT('Paket Internet ', ap.profile_name) as description,
+                               'fa-wifi' as icon,
+                               CASE 
+                                   WHEN ap.sell_price <= 5000 THEN 'blue'
+                                   WHEN ap.sell_price <= 10000 THEN 'green'
+                                   WHEN ap.sell_price <= 20000 THEN 'yellow'
+                                   WHEN ap.sell_price <= 50000 THEN 'orange'
+                                   ELSE 'red'
+                               END as color,
+                               NULL as original_price,
+                               0 as is_featured,
+                               1 as is_active
+                           FROM agent_prices ap 
+                           WHERE ap.agent_id = :agent_id 
+                           ORDER BY ap.sell_price ASC, ap.id");
     $stmt->execute([':agent_id' => $agent['id']]);
     $pricings = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -545,7 +564,8 @@ $site_phone = $agent['phone'] ?? '';
     
     <script>
     function selectPackage(pricing) {
-        $('#profile_id').val(pricing.id);
+        // Use profile_name as the identifier since that's what we use in agent_prices
+        $('#profile_id').val(pricing.profile_name);
         $('#selected_package').text(pricing.display_name);
         
         let priceHtml = 'Rp ' + new Intl.NumberFormat('id-ID').format(pricing.price);

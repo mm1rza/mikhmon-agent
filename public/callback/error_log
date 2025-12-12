@@ -1,0 +1,45 @@
+[27-Nov-2025 23:56:18 UTC] PublicPayment - Constructor called with gateway: tripay
+[27-Nov-2025 23:56:18 UTC] Tripay Callback - Processing payment: T4696728703540VYT6L
+[27-Nov-2025 23:56:18 UTC] Tripay Callback - Status: expired
+[27-Nov-2025 23:56:18 UTC] Tripay Callback - Transaction found: TRX-1764284115-62636
+[28-Nov-2025 17:22:08 UTC] PublicPayment - Constructor called with gateway: tripay
+[28-Nov-2025 17:22:08 UTC] Tripay Callback - Processing payment: T4696728721119D8KSR
+[28-Nov-2025 17:22:08 UTC] Tripay Callback - Status: expired
+[28-Nov-2025 17:22:08 UTC] Tripay Callback - Transaction found: TRX-1764348709-93612
+[30-Nov-2025 14:18:09 UTC] PublicPayment - Constructor called with gateway: tripay
+[30-Nov-2025 14:18:09 UTC] Tripay Callback - Processing payment: T4696728755729ASGNX
+[30-Nov-2025 14:18:09 UTC] Tripay Callback - Status: expired
+[30-Nov-2025 14:18:09 UTC] Tripay Callback - Transaction found: TRX-1764510398-43969
+[04-Dec-2025 04:33:24 UTC] PublicPayment - Constructor called with gateway: tripay
+[04-Dec-2025 04:33:24 UTC] Tripay Callback - Processing payment: T4696728889173BD2SE
+[04-Dec-2025 04:33:24 UTC] Tripay Callback - Status: paid
+[04-Dec-2025 04:33:24 UTC] Tripay Callback - Transaction found: TRX-1764822758-82131
+[04-Dec-2025 04:33:24 UTC] Tripay Callback - Generating voucher for transaction: TRX-1764822758-82131
+[04-Dec-2025 04:33:24 UTC] Tripay Callback - Voucher generated successfully: 00513
+[04-Dec-2025 06:00:38 UTC] PublicPayment - Constructor called with gateway: tripay
+[04-Dec-2025 06:00:38 UTC] Tripay Callback - Processing payment: T4696728891586PK7PH
+[04-Dec-2025 06:00:38 UTC] Tripay Callback - Status: paid
+[04-Dec-2025 06:00:38 UTC] Tripay Callback - Transaction found: TRX-1764828007-88159
+[04-Dec-2025 06:00:38 UTC] Tripay Callback - Generating voucher for transaction: TRX-1764828007-88159
+[04-Dec-2025 06:00:38 UTC] VoucherGenerator: WhatsApp not configured (URL or API Key missing)
+[04-Dec-2025 06:00:38 UTC] Tripay Callback - Voucher generated successfully: 85533
+[04-Dec-2025 06:33:57 UTC] PublicPayment - Constructor called with gateway: tripay
+[04-Dec-2025 06:33:57 UTC] Tripay Callback - Processing payment: T469672889245962SX4
+[04-Dec-2025 06:33:57 UTC] Tripay Callback - Status: paid
+[04-Dec-2025 06:33:57 UTC] Tripay Callback - Transaction found: TRX-1764830011-36454
+[04-Dec-2025 06:33:57 UTC] Tripay Callback - Generating voucher for transaction: TRX-1764830011-36454
+[04-Dec-2025 06:33:58 UTC] VoucherGenerator: Sending WhatsApp to 628170281534 for transaction TRX-1764830011-36454
+[04-Dec-2025 06:33:58 UTC] VoucherGenerator: WhatsApp API Response (HTTP 200): {"detail":"success! message in queue","id":[133924107],"process":"pending","quota":{"6287820851413":{"details":"deduced from total quota","quota":740,"remaining":739,"used":1}},"requestid":258491233,"status":true,"target":["628170281534"]}
+[04-Dec-2025 06:33:58 UTC] Tripay Callback - Voucher generated successfully: 24175
+[04-Dec-2025 07:33:34 UTC] PublicPayment - Constructor called with gateway: tripay
+[04-Dec-2025 07:33:34 UTC] Tripay Callback - Processing payment: T4696728894009OTTIB
+[04-Dec-2025 07:33:34 UTC] Tripay Callback - Status: paid
+[04-Dec-2025 07:33:34 UTC] Tripay Callback - Transaction found: TRX-1764833586-13230
+[04-Dec-2025 07:33:34 UTC] Tripay Callback - Generating voucher for transaction: TRX-1764833586-13230
+[04-Dec-2025 07:33:34 UTC] VoucherGenerator: Sending WhatsApp to 6281299882652 for transaction TRX-1764833586-13230
+[04-Dec-2025 07:33:34 UTC] VoucherGenerator: WhatsApp API Response (HTTP 200): {"reason":"invalid token","status":false}
+[04-Dec-2025 07:33:34 UTC] Tripay Callback - Voucher generated successfully: 32345
+[05-Dec-2025 06:00:13 UTC] PublicPayment - Constructor called with gateway: tripay
+[05-Dec-2025 06:00:13 UTC] Tripay Callback - Processing payment: T4696728891518ND8RI
+[05-Dec-2025 06:00:13 UTC] Tripay Callback - Status: expired
+[05-Dec-2025 06:00:13 UTC] Tripay Callback - Transaction found: TRX-1764827899-75005
