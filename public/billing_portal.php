@@ -125,7 +125,11 @@ try {
         if ($genieacs->isEnabled()) {
             $wifiDebug[] = "GenieACS is enabled";
             
-            // Normalize phone
+            // Get PPPoE username from customer database
+            $pppoeUsername = $customer['genieacs_pppoe_username'] ?? '';
+            $wifiDebug[] = "Customer PPPoE username: $pppoeUsername";
+            
+            // Normalize phone for fallback
             $phone = $customer['phone'] ?? '';
             $wifiDebug[] = "Customer phone: $phone";
             
@@ -135,11 +139,35 @@ try {
             }
             $wifiDebug[] = "Normalized phone: $normalizedPhone";
             
-            // Query device by phone tag WITHOUT projection to get all data including VirtualParameters
-            $query = ['_tags' => $normalizedPhone];
-            $devicesResult = $genieacs->getDevices($query); // No projection - get all data
-            $wifiDebug[] = "Query without projection to get VirtualParameters";
+            // Try to find device by PPPoE username first (primary method)
+            $devicesResult = null;
+            $searchMethod = 'none';
             
+            if (!empty($pppoeUsername)) {
+                // Search by PPPoE username in VirtualParameters
+                $query = ['VirtualParameters.pppoeUsername._value' => $pppoeUsername];
+                $devicesResult = $genieacs->getDevices($query);
+                $wifiDebug[] = "Searching by PPPoE username: $pppoeUsername";
+                
+                if ($devicesResult['success'] && !empty($devicesResult['data'])) {
+                    $searchMethod = 'pppoe_username';
+                    $wifiDebug[] = "Device found by PPPoE username";
+                }
+            }
+            
+            // Fallback: Search by phone tag if PPPoE search failed
+            if (empty($devicesResult['data']) && !empty($normalizedPhone)) {
+                $query = ['_tags' => $normalizedPhone];
+                $devicesResult = $genieacs->getDevices($query);
+                $wifiDebug[] = "Fallback: Searching by phone tag: $normalizedPhone";
+                
+                if ($devicesResult['success'] && !empty($devicesResult['data'])) {
+                    $searchMethod = 'phone_tag';
+                    $wifiDebug[] = "Device found by phone tag";
+                }
+            }
+            
+            $wifiDebug[] = "Search method used: $searchMethod";
             $wifiDebug[] = "Device query success: " . ($devicesResult['success'] ? 'YES' : 'NO');
             $wifiDebug[] = "Devices found: " . count($devicesResult['data'] ?? []);
             
@@ -208,11 +236,21 @@ try {
                 }
                 
                 // Populate ONU device snapshot from GenieACS data
+                // Get connected devices specifically from SSID 1 (WLANConfiguration.1)
+                $ssid1ConnectedDevices = 'N/A';
+                if (isset($device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['TotalAssociations'])) {
+                    $ssid1ConnectedDevices = $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['TotalAssociations']['_value'] ?? 
+                                            $device['InternetGatewayDevice']['LANDevice']['1']['WLANConfiguration']['1']['TotalAssociations'];
+                    $wifiDebug[] = "SSID 1 connected devices (TotalAssociations): $ssid1ConnectedDevices";
+                } else {
+                    $wifiDebug[] = "TotalAssociations not found in WLANConfiguration.1";
+                }
+                
                 $deviceSnapshot = [
                     'status' => 'online', // Device found means online
                     'device_id' => $device['_id'] ?? 'N/A',
                     'pppoe_username' => $device['VirtualParameters']['pppoeUsername']['_value'] ?? $device['VirtualParameters']['pppoeUsername'] ?? 'N/A',
-                    'connected_devices' => $device['VirtualParameters']['activedevices']['_value'] ?? $device['VirtualParameters']['activedevices'] ?? 'N/A',
+                    'connected_devices' => $ssid1ConnectedDevices, // Now using SSID 1 specific data
                     'rx_power' => $device['VirtualParameters']['RXPower']['_value'] ?? $device['VirtualParameters']['RXPower'] ?? 'N/A',
                     'temperature' => $device['VirtualParameters']['gettemp']['_value'] ?? $device['VirtualParameters']['gettemp'] ?? 'N/A',
                     'serial_number' => $device['VirtualParameters']['getSerialNumber']['_value'] ?? $device['VirtualParameters']['getSerialNumber'] ?? 'N/A',
@@ -277,19 +315,31 @@ try {
                         throw new Exception('GenieACS tidak aktif.');
                     }
                     
-                    // Normalize phone: 62xxx -> 0xxx
+                    // Get PPPoE username from customer database
+                    $pppoeUsername = $customer['genieacs_pppoe_username'] ?? '';
+                    
+                    // Normalize phone for fallback
                     $phone = $customer['phone'] ?? '';
                     $normalizedPhone = $phone;
                     if (substr($phone, 0, 2) === '62') {
                         $normalizedPhone = '0' . substr($phone, 2);
                     }
                     
-                    // Query device by phone tag
-                    $query = ['_tags' => $normalizedPhone];
-                    $devicesResult = $genieacs->getDevices($query);
+                    // Try to find device by PPPoE username first
+                    $devicesResult = null;
+                    if (!empty($pppoeUsername)) {
+                        $query = ['VirtualParameters.pppoeUsername._value' => $pppoeUsername];
+                        $devicesResult = $genieacs->getDevices($query);
+                    }
+                    
+                    // Fallback: Search by phone tag
+                    if (empty($devicesResult['data']) && !empty($normalizedPhone)) {
+                        $query = ['_tags' => $normalizedPhone];
+                        $devicesResult = $genieacs->getDevices($query);
+                    }
                     
                     if (!$devicesResult['success'] || empty($devicesResult['data'])) {
-                        throw new Exception('Device tidak ditemukan. Pastikan nomor HP terdaftar di GenieACS.');
+                        throw new Exception('Device tidak ditemukan. Pastikan PPPoE username atau nomor HP terdaftar di GenieACS.');
                     }
                     
                     $device = $devicesResult['data'][0];
@@ -327,19 +377,31 @@ try {
                         throw new Exception('GenieACS tidak aktif.');
                     }
                     
-                    // Normalize phone: 62xxx -> 0xxx
+                    // Get PPPoE username from customer database
+                    $pppoeUsername = $customer['genieacs_pppoe_username'] ?? '';
+                    
+                    // Normalize phone for fallback
                     $phone = $customer['phone'] ?? '';
                     $normalizedPhone = $phone;
                     if (substr($phone, 0, 2) === '62') {
                         $normalizedPhone = '0' . substr($phone, 2);
                     }
                     
-                    // Query device by phone tag
-                    $query = ['_tags' => $normalizedPhone];
-                    $devicesResult = $genieacs->getDevices($query);
+                    // Try to find device by PPPoE username first
+                    $devicesResult = null;
+                    if (!empty($pppoeUsername)) {
+                        $query = ['VirtualParameters.pppoeUsername._value' => $pppoeUsername];
+                        $devicesResult = $genieacs->getDevices($query);
+                    }
+                    
+                    // Fallback: Search by phone tag
+                    if (empty($devicesResult['data']) && !empty($normalizedPhone)) {
+                        $query = ['_tags' => $normalizedPhone];
+                        $devicesResult = $genieacs->getDevices($query);
+                    }
                     
                     if (!$devicesResult['success'] || empty($devicesResult['data'])) {
-                        throw new Exception('Device tidak ditemukan. Pastikan nomor HP terdaftar di GenieACS.');
+                        throw new Exception('Device tidak ditemukan. Pastikan PPPoE username atau nomor HP terdaftar di GenieACS.');
                     }
                     
                     $device = $devicesResult['data'][0];
@@ -689,7 +751,7 @@ if (file_exists(__DIR__ . '/../include/theme.php')) {
                     <div class="device-stat">
                         <div class="label">Perangkat Terkoneksi</div>
                         <div class="value"><?= htmlspecialchars((string)$connectedLabel); ?></div>
-                        <small style="color:#6b7280;">Termasuk perangkat WiFi aktif</small>
+                        <small style="color:#6b7280;">Perangkat WiFi aktif di SSID 1</small>
                     </div>
                     <div class="device-stat">
                         <div class="label">RX Power</div>
