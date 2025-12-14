@@ -1,0 +1,5 @@
+2025-11-27 23:56:18 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"billing.alijaya.net","Accept":"*\/*","X-Callback-Event":"payment_status","X-Callback-Signature":"fb4520870913a1c04f1e60068cfeb3f284174626c928edc19c6da076afaa61d0","Content-Type":"application\/json","User-Agent":"TriPay Payment\/1.0 (+https:\/\/tripay.co.id\/developer?tab=callback)","Content-Length":"307"}
+---

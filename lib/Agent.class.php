@@ -513,7 +513,19 @@ class Agent {
      * Get all agent prices
      */
     public function getAllAgentPrices($agentId) {
-        $sql = "SELECT * FROM agent_prices WHERE agent_id = :agent_id ORDER BY profile_name";
+        $sql = "SELECT 
+                    id,
+                    agent_id,
+                    profile_name,
+                    buy_price as agent_price,
+                    sell_price,
+                    (sell_price - buy_price) as profit,
+                    stock_limit,
+                    created_at,
+                    updated_at
+                FROM agent_prices 
+                WHERE agent_id = :agent_id 
+                ORDER BY profile_name";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':agent_id' => $agentId]);
         return $stmt->fetchAll();

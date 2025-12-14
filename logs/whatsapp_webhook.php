@@ -2055,21 +2055,6 @@ function sendHelp($phone) {
 }
 
 /**
- * Log webhook data
- */
-function logWebhook($data) {
-    $logFile = '../logs/webhook_log.txt';
-    $logDir = dirname($logFile);
-    
-    if (!file_exists($logDir)) {
-        mkdir($logDir, 0755, true);
-    }
-    
-    $logEntry = date('Y-m-d H:i:s') . " | " . $data . "\n";
-    file_put_contents($logFile, $logEntry, FILE_APPEND);
-}
-
-/**
  * Log webhook error
  */
 function logWebhookError($phone, $command, $error) {

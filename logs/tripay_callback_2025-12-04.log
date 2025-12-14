@@ -1,0 +1,20 @@
+2025-12-04 04:33:24 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"billing.alijaya.net","Accept":"*\/*","X-Callback-Event":"payment_status","X-Callback-Signature":"16ed3d23fe95508cae03a8865a2f9e2d0ccf24cbddad6d59bda88af2ae0596f1","Content-Type":"application\/json","User-Agent":"TriPay Payment\/1.0 (+https:\/\/tripay.co.id\/developer?tab=callback)","Content-Length":"293"}
+---
+2025-12-04 06:00:38 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"billing.alijaya.net","Accept":"*\/*","X-Callback-Event":"payment_status","X-Callback-Signature":"85f8e6478c414869b0cc81129ed5038f1294058767b4569be3e7bb1af52203fd","Content-Type":"application\/json","User-Agent":"TriPay Payment\/1.0 (+https:\/\/tripay.co.id\/developer?tab=callback)","Content-Length":"293"}
+---
+2025-12-04 06:33:57 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"billing.alijaya.net","Accept":"*\/*","X-Callback-Event":"payment_status","X-Callback-Signature":"b5714e024ab03842e88fab36cc6b77fc7f2f3000ddca39d6d5a342dda8a6fc5d","Content-Type":"application\/json","User-Agent":"TriPay Payment\/1.0 (+https:\/\/tripay.co.id\/developer?tab=callback)","Content-Length":"293"}
+---
+2025-12-04 07:33:34 - Callback received
+POST: []
+GET: []
+Headers: {"Host":"billing.alijaya.net","Accept":"*\/*","X-Callback-Event":"payment_status","X-Callback-Signature":"c2bb5677657c4922b0ae1f2e720b39d4313ed8396cf5bdc8ee63141571411cd4","Content-Type":"application\/json","User-Agent":"TriPay Payment\/1.0 (+https:\/\/tripay.co.id\/developer?tab=callback)","Content-Length":"308"}
+---
