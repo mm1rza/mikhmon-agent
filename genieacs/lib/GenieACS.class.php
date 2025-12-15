@@ -6,9 +6,9 @@
  */
 
 class GenieACS {
-    public $api_base;
-    public $username;
-    public $password;
+    private $apiUrl;
+    private $username;
+    private $password;
     private $timeout;
     private $enabled;
     
@@ -16,23 +16,16 @@ class GenieACS {
         // Load config if exists
         $configFile = __DIR__ . '/../config.php';
         if (file_exists($configFile)) {
-            require($configFile);
-            
-            // Use variables from config.php
-            $this->api_base = $genieacs_api_base ?? 'http://localhost:7557';
-            $this->username = $genieacs_username ?? '';
-            $this->password = $genieacs_password ?? '';
-            $this->timeout = 30;
-            $this->enabled = true;
+            require_once($configFile);
+            $this->apiUrl = GENIEACS_API_URL;
+            $this->username = GENIEACS_USERNAME;
+            $this->password = GENIEACS_PASSWORD;
+            $this->timeout = GENIEACS_TIMEOUT;
+            $this->enabled = GENIEACS_ENABLED;
         } else {
             $this->enabled = false;
-            $this->api_base = '';
-            $this->username = '';
-            $this->password = '';
-            $this->timeout = 30;
         }
     }
-
     
     /**
      * Check if GenieACS is enabled
@@ -49,7 +42,7 @@ class GenieACS {
             return ['success' => false, 'message' => 'GenieACS is not enabled'];
         }
         
-        $url = $this->api_base . $endpoint;
+        $url = $this->apiUrl . $endpoint;
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
