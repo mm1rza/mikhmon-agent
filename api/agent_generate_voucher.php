@@ -152,12 +152,55 @@ try {
             $generatedVouchers[] = [
                 'username' => $username,
                 'password' => $password,
-                'profile' => $profileName
+                'profile' => $profileName,
+                'buy_price' => $buyPrice,
+                'sell_price' => $priceData['sell_price']
             ];
             
             $successCount++;
         }
     }
+    
+    // Get profile details for validity
+    $profiles = $API->comm("/ip/hotspot/user/profile/print", array(
+        "?name" => $profileName
+    ));
+    
+    $validity = 'N/A';
+    if (!empty($profiles) && isset($profiles[0]['on-login'])) {
+        $onLogin = $profiles[0]['on-login'];
+        $parts = explode(",", $onLogin);
+        if (isset($parts[3])) {
+            $validity = trim($parts[3]);
+        }
+    }
+    
+    // Get hotspot name
+    $hotspotName = 'WiFi Hotspot';
+    if (isset($data[$session][4])) {
+        $hotspotNameRaw = explode('%', $data[$session][4])[1] ?? '';
+        if (!empty($hotspotNameRaw)) {
+            $hotspotName = $hotspotNameRaw;
+        }
+    }
+    
+    // Get DNS name
+    $dnsName = '';
+    if (isset($data[$session][5])) {
+        $dnsNameRaw = explode('@|@', $data[$session][5])[1] ?? '';
+        if (!empty($dnsNameRaw)) {
+            $dnsName = $dnsNameRaw;
+        }
+    }
+    
+    if (empty($dnsName) && isset($data[$session][4])) {
+        $parts = explode('@|@', $data[$session][4]);
+        if (count($parts) > 1) {
+            $dnsName = $parts[1];
+        }
+    }
+    
+    $loginUrl = !empty($dnsName) ? "http://$dnsName" : "http://$iphost";
     
     $API->disconnect();
     
@@ -167,51 +210,88 @@ try {
     
     if (!empty($customerPhone) && !empty($generatedVouchers) && WHATSAPP_ENABLED) {
         try {
-            // Load payment settings for hotspot info
-            $db = getDBConnection();
-            $stmt = $db->query("SELECT setting_key, setting_value FROM agent_settings WHERE setting_key LIKE 'payment_%'");
-            $paymentSettings = [];
-            while ($row = $stmt->fetch()) {
-                $paymentSettings[$row['setting_key']] = $row['setting_value'];
-            }
-            
-            // Get hotspot name from session name or use default
-            $hotspotName = $session ?? 'Hotspot WiFi';
-            
-            // Get DNS name from config or use IP
-            $dnsName = '';
-            if (isset($data[$session]) && isset($data[$session][4])) {
-                $dnsName = explode('@|@', $data[$session][4])[1] ?? '';
-            }
-            
-            $loginUrl = !empty($dnsName) ? "http://$dnsName" : "http://$iphost";
-            
-            // Format message for all vouchers
-            $message = "*🎫 VOUCHER WIFI HOTSPOT*\n";
-            $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
-            $message .= "*Hotspot:* " . $hotspotName . "\n";
-            $message .= "*Profile:* " . $profileName . "\n\n";
-            
-            if (count($generatedVouchers) == 1) {
-                // Single voucher
-                $v = $generatedVouchers[0];
-                $message .= "*Username:* `" . $v['username'] . "`\n";
-                $message .= "*Password:* `" . $v['password'] . "`\n";
-            } else {
-                // Multiple vouchers
-                $message .= "*Jumlah Voucher:* " . count($generatedVouchers) . "\n\n";
-                foreach ($generatedVouchers as $index => $v) {
-                    $message .= "*Voucher #" . ($index + 1) . "*\n";
-                    $message .= "Username: `" . $v['username'] . "`\n";
-                    $message .= "Password: `" . $v['password'] . "`\n\n";
+            // Get hotspot name from MikroTik config
+            $hotspotName = 'WiFi Hotspot'; // Default
+            if (isset($data[$session][4])) {
+                $hotspotNameRaw = explode('%', $data[$session][4])[1] ?? '';
+                if (!empty($hotspotNameRaw)) {
+                    $hotspotName = $hotspotNameRaw;
                 }
             }
             
-            $message .= "\n*Login URL:*\n";
-            $message .= $loginUrl . "\n\n";
-            $message .= "━━━━━━━━━━━━━━━━━━━━\n";
-            $message .= "_Terima kasih telah menggunakan layanan kami_\n";
-            $message .= "_Voucher ini berlaku sesuai ketentuan yang tertera_";
+            // Get DNS name from config (format: dnsname@|@value)
+            $dnsName = '';
+            if (isset($data[$session][5])) {
+                $dnsNameRaw = explode('@|@', $data[$session][5])[1] ?? '';
+                if (!empty($dnsNameRaw)) {
+                    $dnsName = $dnsNameRaw;
+                }
+            }
+            
+            // If no DNS, try to get from hotspot name field
+            if (empty($dnsName) && isset($data[$session][4])) {
+                $parts = explode('@|@', $data[$session][4]);
+                if (count($parts) > 1) {
+                    $dnsName = $parts[1];
+                }
+            }
+            
+            // Fallback to IP if no DNS configured
+            $loginUrl = !empty($dnsName) ? "http://$dnsName" : "http://$iphost";
+            
+            // Get profile details from MikroTik to get validity
+            $profiles = $API->comm("/ip/hotspot/user/profile/print", array(
+                "?name" => $profileName
+            ));
+            
+            $validity = 'N/A';
+            $profilePrice = $priceData['sell_price'];
+            
+            if (!empty($profiles) && isset($profiles[0]['on-login'])) {
+                $onLogin = $profiles[0]['on-login'];
+                $parts = explode(",", $onLogin);
+                if (isset($parts[3])) {
+                    $validity = trim($parts[3]);
+                }
+            }
+            
+            if (count($generatedVouchers) == 1) {
+                // Single voucher - match exact format from user's example
+                $v = $generatedVouchers[0];
+                
+                $message = "🎫 *VOUCHER ANDA*\n\n";
+                $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+                $message .= "Hotspot: *" . $hotspotName . "*\n";
+                $message .= "Profile: *" . $profileName . "*\n\n";
+                $message .= "Username: " . $v['username'] . "\n";
+                $message .= "Password: " . $v['password'] . "\n\n";
+                $message .= "Validity: " . $validity . "\n";
+                $message .= "Harga: Rp " . number_format($profilePrice, 0, ',', '.') . "\n\n";
+                $message .= "Login URL:\n";
+                $message .= $loginUrl . "/login?username=" . $v['username'] . "&password=" . $v['password'] . "\n\n";
+                $message .= "━━━━━━━━━━━━━━━━━━━━\n";
+                $message .= "_Terima kasih telah menggunakan layanan kami_";
+                
+            } else {
+                // Multiple vouchers
+                $message = "🎫 *VOUCHER WIFI HOTSPOT*\n";
+                $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+                $message .= "*Hotspot:* " . $hotspotName . "\n";
+                $message .= "*Profile:* " . $profileName . "\n";
+                $message .= "*Validity:* " . $validity . "\n";
+                $message .= "*Harga/voucher:* Rp " . number_format($profilePrice, 0, ',', '.') . "\n";
+                $message .= "*Jumlah:* " . count($generatedVouchers) . " voucher\n\n";
+                
+                foreach ($generatedVouchers as $index => $v) {
+                    $message .= "*Voucher #" . ($index + 1) . "*\n";
+                    $message .= "Username: " . $v['username'] . "\n";
+                    $message .= "Password: " . $v['password'] . "\n";
+                    $message .= "Login: " . $loginUrl . "/login?username=" . $v['username'] . "&password=" . $v['password'] . "\n\n";
+                }
+                
+                $message .= "━━━━━━━━━━━━━━━━━━━━\n";
+                $message .= "_Terima kasih telah menggunakan layanan kami_";
+            }
             
             // Send WhatsApp
             $result = sendWhatsAppMessage($customerPhone, $message);
@@ -246,7 +326,10 @@ try {
         'message' => "Berhasil generate $successCount voucher!",
         'vouchers' => $generatedVouchers,
         'balance' => $agentData['balance'],
-        'total_cost' => $totalCost
+        'total_cost' => $totalCost,
+        'hotspot_name' => $hotspotName,
+        'validity' => $validity,
+        'login_url' => $loginUrl
     ];
     
     // Add WhatsApp status
