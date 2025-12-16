@@ -184,22 +184,16 @@ try {
         }
     }
     
-    // Get DNS name
+    // Get DNS name - using correct delimiter (^)
     $dnsName = '';
     if (isset($data[$session][5])) {
-        $dnsNameRaw = explode('@|@', $data[$session][5])[1] ?? '';
+        $dnsNameRaw = explode('^', $data[$session][5])[1] ?? '';
         if (!empty($dnsNameRaw)) {
             $dnsName = $dnsNameRaw;
         }
     }
     
-    if (empty($dnsName) && isset($data[$session][4])) {
-        $parts = explode('@|@', $data[$session][4]);
-        if (count($parts) > 1) {
-            $dnsName = $parts[1];
-        }
-    }
-    
+    // Fallback to IP if no DNS configured
     $loginUrl = !empty($dnsName) ? "http://$dnsName" : "http://$iphost";
     
     // NOW disconnect from MikroTik
