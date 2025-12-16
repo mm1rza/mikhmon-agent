@@ -278,6 +278,24 @@ class VoucherGenerator {
             $username = $this->generateUniqueUsername($API);
             $password = $this->generatePassword($username);
             
+            // Get profile details for validity BEFORE adding user
+            $validity = 'N/A';
+            try {
+                $profiles = $API->comm("/ip/hotspot/user/profile/print", array(
+                    "?name" => $transaction['profile_name']
+                ));
+                
+                if (!empty($profiles) && isset($profiles[0]['on-login'])) {
+                    $onLogin = $profiles[0]['on-login'];
+                    $parts = explode(",", $onLogin);
+                    if (isset($parts[3])) {
+                        $validity = trim($parts[3]);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Error getting validity: " . $e->getMessage());
+            }
+            
             // Add user to MikroTik
             $API->comm("/ip/hotspot/user/add", [
                 "name" => $username,
@@ -286,6 +304,7 @@ class VoucherGenerator {
                 "comment" => "up-Public Sale - " . $transaction['transaction_id']
             ]);
             
+            // NOW disconnect
             $API->disconnect();
             
             // Update transaction with voucher
@@ -300,8 +319,8 @@ class VoucherGenerator {
                 ':id' => $sale_id
             ]);
             
-            // Send voucher via WhatsApp
-            $this->sendVoucherWhatsApp($transaction, $username, $password);
+            // Send voucher via WhatsApp (with validity already fetched)
+            $this->sendVoucherWhatsApp($transaction, $username, $password, $validity);
             
             // Update sent timestamp
             $stmt = $this->db->prepare("UPDATE public_sales SET voucher_sent_at = NOW() WHERE id = :id");
@@ -325,7 +344,7 @@ class VoucherGenerator {
     /**
      * Send voucher via WhatsApp
      */
-    private function sendVoucherWhatsApp($transaction, $username, $password) {
+    private function sendVoucherWhatsApp($transaction, $username, $password, $validity = 'N/A') {
         // Get WhatsApp API settings
         $stmt = $this->db->query("SELECT setting_key, setting_value FROM agent_settings WHERE setting_key LIKE 'whatsapp_%'");
         $wa_settings = [];
@@ -361,19 +380,57 @@ class VoucherGenerator {
             return false;
         }
         
-        // Format message
-        $message = "*VOUCHER WiFi*\n\n";
-        $message .= "Terima kasih atas pembelian Anda!\n\n";
-        $message .= "📦 *Paket:* " . $transaction['profile_name'] . "\n";
-        $message .= "💰 *Total:* Rp " . number_format($transaction['total_amount'], 0, ',', '.') . "\n\n";
-        $message .= "🔑 *Username:* `" . $username . "`\n";
-        $message .= "🔐 *Password:* `" . $password . "`\n\n";
-        $message .= "*Cara Menggunakan:*\n";
-        $message .= "1. Hubungkan ke WiFi\n";
-        $message .= "2. Buka browser\n";
-        $message .= "3. Masukkan username & password\n\n";
-        $message .= "Voucher berlaku sesuai paket yang dipilih.\n\n";
-        $message .= "_Simpan pesan ini untuk referensi Anda._";
+        // Get MikroTik config for hotspot name and DNS
+        include_once(__DIR__ . '/../include/config.php');
+        
+        $session = null;
+        foreach ($data as $sess => $sessData) {
+            if ($sess != 'mikhmon') {
+                $session = $sess;
+                break;
+            }
+        }
+        
+        $hotspotName = 'WiFi Hotspot';
+        $dnsName = '';
+        
+        if ($session && isset($data[$session])) {
+            // Get hotspot name
+            if (isset($data[$session][4])) {
+                $hotspotNameRaw = explode('%', $data[$session][4])[1] ?? '';
+                if (!empty($hotspotNameRaw)) {
+                    $hotspotName = $hotspotNameRaw;
+                }
+            }
+            
+            // Get DNS name - using correct delimiter (^)
+            if (isset($data[$session][5])) {
+                $dnsNameRaw = explode('^', $data[$session][5])[1] ?? '';
+                if (!empty($dnsNameRaw)) {
+                    $dnsName = $dnsNameRaw;
+                }
+            }
+            
+            // Get IP as fallback
+            $iphost = explode('!', $data[$session][1])[1] ?? '';
+            $loginUrl = !empty($dnsName) ? "http://$dnsName" : "http://$iphost";
+        } else {
+            $loginUrl = '';
+        }
+        
+        // Format message - MATCH standard format
+        $message = "🎫 *VOUCHER ANDA*\n\n";
+        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $message .= "Hotspot: *" . $hotspotName . "*\n";
+        $message .= "Profile: *" . $transaction['profile_name'] . "*\n\n";
+        $message .= "Username: " . $username . "\n";
+        $message .= "Password: " . $password . "\n\n";
+        $message .= "Validity: " . $validity . "\n";
+        $message .= "Harga: Rp " . number_format($transaction['total_amount'], 0, ',', '.') . "\n\n";
+        $message .= "Login URL:\n";
+        $message .= $loginUrl . "/login?username=" . $username . "&password=" . $password . "\n\n";
+        $message .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $message .= "_Terima kasih telah menggunakan layanan kami_";
         
         // Log before sending
         error_log("VoucherGenerator: Sending WhatsApp to " . $phone . " for transaction " . $transaction['transaction_id']);
